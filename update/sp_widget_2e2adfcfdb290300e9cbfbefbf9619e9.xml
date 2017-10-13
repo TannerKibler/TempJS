@@ -35,6 +35,8 @@ function($rootElement, $scope, $compile, $window, $location, spUtil, $rootScope,
 		if (isTablet.matches)
 			is_tablet = true;
 	});
+	
+	$scope.is_mobile = is_mobile;
 
 	var modalRowAdd = {
 		animation: true,
@@ -254,15 +256,22 @@ function($rootElement, $scope, $compile, $window, $location, spUtil, $rootScope,
 	}
 
 	$scope.calculateMyPopoverPlacement = function(col, index, rowIndex) {
-		return 'mouse';
 		if (!col)
 			return 'top';
 
-		if (~col.bootClass.indexOf('col-sm-12'))  //If I'm a full column, popover to the top.
-			return 'top';
+		if (~col.bootClass.indexOf('col-sm-12')) {//If I'm a full column, popover to the top.
+			if (rowIndex == 0)
+				return 'bottom';
+			else
+				return 'top';
+		}
 
-		if (is_mobile || is_tablet)
-			return 'mouse';
+		if (is_mobile || is_tablet) {
+			if (rowIndex == 0)
+				return 'bottom';
+			else
+				return 'top';
+		}
 
 		var toReturn = '';
 		var mdClass = col.bootClass.split(' ');
@@ -819,6 +828,10 @@ $borderRad: 6px;
   display:block;
 }
 
+.popBtn {
+  outline: 0;
+}
+
 .padding20 {
   padding-bottom: 10px;
   padding-top: 10px;
@@ -827,6 +840,10 @@ $borderRad: 6px;
 .margin20 {
   margin-bottom: 10px;
   margin-top: 10px;
+}
+
+.borderAll {
+  border: 1px solid #ddd;
 }
 
 .borderBottom {
@@ -1780,14 +1797,14 @@ function isEmpty(ob) {
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2017-10-06 15:22:58</sys_created_on>
         <sys_id>2e2adfcfdb290300e9cbfbefbf9619e9</sys_id>
-        <sys_mod_count>248</sys_mod_count>
+        <sys_mod_count>258</sys_mod_count>
         <sys_name>Page Builder</sys_name>
         <sys_package display_value="Service Portal Customizer" source="x_60289_service_po">848abecfdbe50300e9cbfbefbf961941</sys_package>
         <sys_policy/>
         <sys_scope display_value="Service Portal Customizer">848abecfdbe50300e9cbfbefbf961941</sys_scope>
         <sys_update_name>sp_widget_2e2adfcfdb290300e9cbfbefbf9619e9</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2017-10-13 21:27:07</sys_updated_on>
+        <sys_updated_on>2017-10-13 21:44:28</sys_updated_on>
         <template><![CDATA[<div id="top">
   <div ng-if="data.isPageBuilder">
     <button class="btn btn-primary btn-lg edit" ng-click="toggleEdit($event)">{{editLabel}}</button>
@@ -1802,7 +1819,7 @@ function isEmpty(ob) {
   </div>
   <div id="builder">
     <div class="row repeated-item" ng-class="{'padding20 margin20 borderBottom borderTop minHeight100': tgEdit}" ng-repeat="(rowIndex, row) in rows">
-      <div class="centCont repeated-item {{col.bootClass}}" ng-class="{'borderLeft borderRight minHeight300 successBackground roundedBorder': tgEdit}" ng-repeat="col in row.cols" ng-if="col.bootClass">
+      <div class="centCont repeated-item {{col.bootClass}}" ng-class="{'borderAll minHeight300 successBackground roundedBorder': tgEdit, 'margin20': is_mobile && tgEdit}" ng-repeat="col in row.cols" ng-if="col.bootClass">
         <sp-widget class="show-hide" ng-show="rows[rowIndex].cols[$index].widgets.length > 0" ng-repeat="widg in rows[rowIndex].cols[$index].widgets" widget="widg"></sp-widget>
         <!--<button class="btn btn-lg btn-primary centerMe" ng-click="popWidgetCTRLModal(rows[rowIndex].cols[$index])" ng-show="tgEdit"><i class="fa fa-plus-circle text-active"></i></button>-->
         <button ng-if="tgEdit" class="popBtn" uib-popover-template="rowWidgetPopoverOb.templateUrl" popover-placement="{{calculateMyPopoverPlacement(col, $index, rowIndex)}}"popover-animation="true"
@@ -1826,8 +1843,8 @@ function isEmpty(ob) {
         <a href="#" ng-click="moveMeRight(popupOb.colIndex, popupOb.rowOb)" ng-class="{'disabledLink': !popupOb.canMoveRight}"><i class="fa fa-arrow-right"></i></a> 
         <a href="#"><i class="fa fa-remove"></i></a>
   		</div>
-      <button style="100%;" ng-if="popupOb.canAddWidgets" class="btn btn-lg btn-primary">Add Widget</button>
-      <button style="100%;" ng-if="popupOb.hasWidgets" class="btn btn-lg btn-info">Manage Widgets</button>
+      <button style="width: 95%;" ng-if="popupOb.canAddWidgets" class="btn btn-lg btn-primary">Add Widget</button>
+      <button style="width: 95%;" ng-if="popupOb.hasWidgets" class="btn btn-lg btn-info">Manage Widgets</button>
   </div>
 </script>]]></template>
     </sp_widget>
