@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<database>
+    <element attributes="update_synch=true" extends="sys_metadata" label="Row Type" max_length="40" name="x_60289_service_po_row_type" type="collection">
+        <element display="true" label="Display Name" mandatory="true" max_length="100" name="display_name" type="string"/>
+        <element default="0" label="Order" mandatory="true" max_length="10" name="order" type="integer"/>
+        <element label="Table Cell Spans" mandatory="true" max_length="500" name="table_cell_spans" type="string"/>
+    </element>
+</database>

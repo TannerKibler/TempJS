@@ -1,0 +1,317 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>package_private</access>
+        <active>true</active>
+        <api_name>x_60289_service_po.ServicePortalCustomizerServerLogic</api_name>
+        <client_callable>false</client_callable>
+        <description/>
+        <name>ServicePortalCustomizerServerLogic</name>
+        <script><![CDATA[var ServicePortalCustomizerServerLogic = Class.create();
+ServicePortalCustomizerServerLogic.prototype = {
+	initialize: function() {
+	},
+
+	type: 'ServicePortalCustomizerServerLogic',
+
+	_lookupPage : function(name) {
+		var grPage = new GlideRecord('sp_page');
+		grPage.addQuery('id', name);
+		grPage.query();
+
+		return (grPage.next()) ? grPage.sys_id.toString() : null;
+	},
+
+	getLookupValues : function(ob, sp) {
+		if (!ob.table_name || !ob.filter || !ob.display_field || !ob.value_field)
+			return;
+
+		var retArr = [];
+		var gr = new GlideRecord(ob.table_name);
+		gr.addEncodedQuery(ob.filter);
+		gr.query();
+
+		while (gr.next()) {
+			if (!sp.canReadRecord(ob.table_name, gr.sys_id.getDisplayValue()))
+				continue;
+
+			var tmpOb = {};
+			tmpOb.display = gr[ob.display_field].toString();
+			tmpOb.value = gr[ob.value_field].toString();
+			retArr.push(tmpOb);
+		}
+		return retArr;
+	},
+
+	fireSave : function(rows, user, page) {
+		if (!rows) {
+			gs.addErrorMessage('Failed to read you rows!  Please reach out to your Systems Administrator.');
+			return null;
+		}
+
+		var pageSys, defColName = 'column_', grRows;
+
+		pageSys = this._lookupPage(page);
+		if (!pageSys) {
+			gs.addErrorMessage('No page supplied!  Please reach out to your Systems Administrator.');
+			return null;
+		}
+
+		try {
+			grRows = new GlideRecord('x_60289_service_po_user_widget');
+			grRows.addQuery('user', user);
+			grRows.addQuery('page', pageSys);
+			grRows.addQuery('default_row', false);
+			grRows.deleteMultiple();
+
+			grRows = new GlideRecord('x_60289_service_po_user_widget');
+			for (var x in rows) {
+				grRows.initialize();
+				grRows.order = x;
+				grRows.user = user;
+				grRows.page = pageSys;
+				grRows.default_row = false;
+				var indexer = 1;
+				for (var i = 0; i < 6; i++) {
+					var tmp = rows[x].cols[i] || {};
+					var newOb = {};
+					newOb.bootClass = tmp.bootClass;
+					newOb.widgets = [];
+					for (var y in tmp.widgets) {
+						newOb.widgets.push({'id': tmp.widgets[y].id, 'options': tmp.widgets[y].options});
+					}
+					grRows[defColName + indexer + ''] = JSON.stringify(newOb);
+					indexer++;
+				}
+				grRows.insert();
+			}
+		}
+		catch(err) {
+			this._logError(err, 'Saving User Rows');
+		}
+	},
+
+	getRowTypes : function() {
+		var grRow, retArr = [];
+
+		try {
+			grRow = new GlideRecord('x_60289_service_po_row_type');
+			grRow.orderBy('order');
+			grRow.query();
+
+			while(grRow.next()) {
+				var tmpOb = {};
+				this._copyGR(grRow, tmpOb);
+
+				tmpOb.table_cell_spans.value = JSON.parse(tmpOb.table_cell_spans.value).spans;
+				retArr.push(tmpOb);
+			}
+
+			return retArr;
+		}
+		catch(err) {
+			this._logError(err, 'Get Row Types');
+		}
+	},
+
+	//Pulls user widgets or default widgets
+	getUserRows : function(pageName, sp, defaulted, /*optional sys of Page*/ pageSys) {
+		try {
+			var userRows = [], contGR, serRows = [];
+
+			if (!pageSys)
+				pageSys = this._lookupPage(pageName);
+
+			if (!pageSys)
+				return [];
+
+			contGR = new GlideRecord('x_60289_service_po_user_widget');
+
+			if (!defaulted) {
+				contGR.addQuery('user', gs.getUserID());
+				contGR.addQuery('default_row', false);
+			}
+			else
+				contGR.addQuery('default_row', true);
+
+			contGR.orderBy('order');
+			contGR.addQuery('page', pageSys);
+			contGR.query();
+
+			while (contGR.next()) {
+				var tmpRow = {}, defColName = 'column_', rowCols = [];
+
+				//tmpRow.sys_id = contGR.row.toString();
+				for (var i = 1; i <= 6; i++) {
+					var tmpColOb = {}, tmpColName, widgHolder;
+					tmpColName = defColName + i;
+
+					if (contGR[tmpColName].toString() != '') {
+						widgHolder = JSON.parse(contGR[tmpColName].toString());	
+						if (widgHolder.widgets) {
+							for (var x in widgHolder.widgets) {
+								widgHolder.widgets[x] = sp.getWidget(widgHolder.widgets[x].id, widgHolder.widgets[x].options || {});
+							}
+							tmpColOb.widgets = widgHolder.widgets;
+						}
+						else
+							tmpColOb.widgets = [];
+						//tmpColOb.widg = sp.getWidget(widgHolder.id, widgHolder.options || {});
+						tmpColOb.bootClass = widgHolder.bootClass || '';
+
+					}
+					else {
+						tmpColOb.widgets = [];
+						tmpColOb.bootClass = '';
+					}
+
+					rowCols.push(tmpColOb);
+				}
+				tmpRow.cols = rowCols;
+				userRows.push(tmpRow);
+			}		
+			
+			return userRows;
+
+			/*if (!defaulted)
+				if (userRows.length > 0)
+					return userRows;
+				else
+					return this.getUserRows(pageName, sp, true, pageSys);
+			else
+				return userRows;*/
+		}
+		catch(err) {
+			this._logError(err, 'Initial Population');
+		}
+	},
+
+	//Get GR for this Container type
+	_getRowGR : function(sys) {
+		if (!sys)
+			return null;
+
+		var grRow = new GlideRecord('x_60289_service_po_row_type');
+		var checker = grRow.get(sys);
+		if (checker)
+			return grRow;
+		else
+			return null;
+	},
+
+	//Loads all user selectable widgets
+	loadAvailableWidgets : function() {
+		var widgets = [], chkCat = [], retCategories = [], widgGR, finalOb = {};
+
+		widgGR = new GlideRecord('x_60289_service_po_customer_facing_widget');
+		widgGR.addQuery('active', true);
+		widgGR.query();
+
+		while(widgGR.next()) {
+			var tmpWidget = {};
+
+			try {
+
+				//Skip if the user can't select this widget.
+				if (!this._userCanSee(widgGR.required_roles.toString()))
+					continue;
+
+				//Copy widget GR values into temp object
+				this._copyGR(widgGR, tmpWidget);
+
+				tmpWidget.id = widgGR.widget.id.toString();
+
+				//If we haven't already pushed this category, push the category
+				if (chkCat.indexOf(tmpWidget.category.value) == -1) {
+					chkCat.push(tmpWidget.category.value);
+					retCategories.push({label: tmpWidget.category.display, value: tmpWidget.category.value});
+				}
+
+				//Parse and store up widget options
+				if (typeof tmpWidget.default_options != 'undefined' && tmpWidget.default_options.value != '')
+					tmpWidget.default_options = JSON.parse(tmpWidget.default_options.value);
+				else
+					tmpWidget.default_options.value = {};
+
+				if (typeof tmpWidget.user_options != 'undefined' && tmpWidget.user_options.value != '')
+					tmpWidget.user_options.value = JSON.parse(tmpWidget.user_options.value);
+				else
+					tmpWidget.user_options.value = {};
+
+			}
+			catch(err) {
+				this._logError(err, 'loadAvailable');
+				continue;
+			}
+			widgets.push(tmpWidget);
+		}
+
+		finalOb.widgets = widgets;
+		finalOb.categories = retCategories;
+
+		return finalOb;
+	},
+
+	_userCanSee : function(roleList) {
+		var roleArr = roleList.split(',');
+
+		if (roleArr.length == 0)
+			return true;
+
+		var checker = false;
+		for (var x in roleArr) {
+
+			if (checker)
+				return checker;
+
+			checker = gs.getUser().hasRole(roleArr[x]);
+		}
+
+		return checker;
+	},
+
+	_copyGR : function(gr, retOb) {
+		if (!gr) {
+			return null;
+		}
+
+		for (var x in gr) {
+			if (gr.hasOwnProperty(x)) {
+				try {
+					if (x.substring(0, 'sys_'.length) != 'sys_' || x == 'sys_id') {
+						retOb[x] = {};
+						retOb[x].value = gr[x].toString();
+						retOb[x].display = gr[x].getDisplayValue();
+						var tmp = gr[x].getED();
+						if (tmp)
+							retOb[x].type = tmp.getInternalType();
+						else
+							retOb[x].type = null;
+					}
+				}
+				catch(err) {
+					this._logError(err, 'copyGR');
+				}
+			}
+		}
+	},
+
+	_logError : function(msg, orig) {
+		gs.addErrorMessage('An error has occured!  Please contact your System Administrator.');
+		gs.error('Error in Service Portal Customizer.  Error message: ' + msg + ' from ' + orig);
+	}
+};]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2017-10-06 15:46:09</sys_created_on>
+        <sys_id>d0da5343db690300e9cbfbefbf9619db</sys_id>
+        <sys_mod_count>84</sys_mod_count>
+        <sys_name>ServicePortalCustomizerServerLogic</sys_name>
+        <sys_package display_value="Service Portal Customizer" source="x_60289_service_po">848abecfdbe50300e9cbfbefbf961941</sys_package>
+        <sys_policy>read</sys_policy>
+        <sys_scope display_value="Service Portal Customizer">848abecfdbe50300e9cbfbefbf961941</sys_scope>
+        <sys_update_name>sys_script_include_d0da5343db690300e9cbfbefbf9619db</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-10-13 20:35:06</sys_updated_on>
+    </sys_script_include>
+</record_update>

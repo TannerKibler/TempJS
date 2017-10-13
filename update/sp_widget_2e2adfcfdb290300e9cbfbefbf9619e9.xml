@@ -1,0 +1,1834 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sp_widget">
+    <sp_widget action="INSERT_OR_UPDATE">
+        <client_script><![CDATA[
+function($rootElement, $scope, $compile, $window, $location, spUtil, $rootScope, $uibModal, $sce) {
+	/* widget controller */
+	var c = this;
+	var XS_CONST = 'col-xs-12 ';
+	var MD_TEMP = 'col-sm-REP';
+	var is_mobile = false;
+	var is_tablet = false;
+	var MAX_WIDGETS = 3;
+	$scope.availWidgets = c.data.availWidgets.widgets;
+	$scope.categories = c.data.availWidgets.categories;
+	$scope.tgEdit = false;
+	$scope.editLabel = 'Edit Page Layout';
+	$scope.selectedWidget = {};
+	$scope.selectedNewRow = '';
+	$scope.shownImg = {};
+	$scope.maxRows = 3;
+
+	if (c.data.isPageBuilder) {
+		//$scope.categories = c.data.categories;
+		if ($scope.categories.length > 0)
+			$scope.mdlCategory = $scope.categories[0].value;
+	}
+
+	$(document).ready(function() {      
+		var isMobile = window.matchMedia("only screen and (max-width: 760px)");
+		var isTablet = window.matchMedia("only screen and (max-width: 1024px and min-width: 760px)")
+		if (isMobile.matches) {
+			//Conditional script here
+			is_mobile = true;
+		}
+		if (isTablet.matches)
+			is_tablet = true;
+	});
+
+	var modalRowAdd = {
+		animation: true,
+		templateUrl: "newRowModal",
+		scope: $scope,
+		size: 'lg'
+		//backdrop: 'static'
+	};
+
+	var modalWidgetCTRL = {
+		animation: true,
+		templateUrl: "widgetCTRLModal",
+		scope: $scope,
+		size: 'lg'
+		//backdrop: 'static'
+	};
+
+	$scope.closeWidgetCTRLModal = function() {
+		$scope.widgetCTRLModal.close();
+		$scope.selectedWidget = {};
+	};
+
+	$scope.popWidgetCTRLModal = function(colOb) {
+		console.log(colOb);
+		$scope.siblingWidgets = colOb.widgets;
+		$scope.widgetCTRLModal = $uibModal.open(modalWidgetCTRL);
+
+		$scope.widgetCTRLModal.result.then(function(){
+			//Get triggers when modal is closed
+		}, function(){
+			//$scope.selectedNewRow = {};
+			$scope.selectedWidget = {};
+		});
+	}
+
+	$scope.closeModalNewRow = function() {
+		$scope.newRowModal.close();
+		$scope.selectedNewRow = {};
+	};
+
+	$scope.popModalNewRow = function() {
+		$scope.newRowModal = $uibModal.open(modalRowAdd);
+
+		$scope.newRowModal.result.then(function(){
+			//Get triggers when modal is closed
+		}, function(){
+			$scope.selectedNewRow = {};
+		});
+	}
+
+	$scope.rowWidgetPopoverOb = {
+		content: 'Hello, World!',
+		templateUrl: 'rowWidgetPopover.html',
+		isOpen: false//,
+		//title: 'Title'
+	};
+
+	$scope.selectRow = function(rowOb) {
+		$scope.selectedNewRow = rowOb;
+	}
+
+	$scope.trustHTML = function(text) {
+		return $sce.trustAsHtml(text);
+	}
+
+	$scope.addNewRow = function() {
+		var tmp = $scope.selectedNewRow;
+		if (tmp.table_cell_spans && tmp.table_cell_spans.value.length > 0) {
+			var tmpRowOb = {};
+			var tmpUserRowCols = [];
+			for (var x in tmp.table_cell_spans.value) {
+				var tmpObs = {};
+				tmpObs.bootClass = XS_CONST + MD_TEMP.replace('REP', tmp.table_cell_spans.value[x].lbl);
+				tmpObs.widgets = [];
+				tmpUserRowCols.push(tmpObs);
+			}
+			tmpRowOb.cols = tmpUserRowCols;
+			$scope.rows.unshift(tmpRowOb);
+			$scope.closeModalNewRow();
+			if (is_mobile){
+				spUtil.addInfoMessage('Successfully added a new row! Your screen size will cause your row to appear stacked.');
+				spUtil.addInfoMessage('On larger screens, your columns will take effect.');
+			}
+			else
+				spUtil.addInfoMessage('Successfully added a new row!');
+
+		}
+		else {
+			spUtil.addErrorMessage('Failed to add row!  Please contact your Systems Administrator.')
+		}
+	}
+
+	$scope.fltAvail = function(widg) {
+		return (widg.category.value.toString().toLowerCase() == $scope.mdlCategory.toString().toLowerCase() &&
+						(widg.minSize == null || widg.minSize <= $scope.colSize));
+	}
+
+	function parseMyOptions(optArr) {
+		if (!optArr)
+			return [];
+
+		var retArr = [];
+		for (var x in optArr) {
+			var tmp = optArr[x];
+			if (typeof tmp != 'object')
+				continue;
+
+			if (tmp.type == 'lookup' || tmp.type == 'imgPicker') {
+				tmp.trying = true;
+				var lookupOb = {}, fdName = tmp.field_name;
+				lookupOb = tmp.lookup_data;
+				c.server.get({type: 'option_lookup', lookup_ob: lookupOb}).then(function(response) {
+					//tmp.retLookupOptions = response.data.retLookupOptions;
+					for (var x in $scope.selectedWidget.parsed_options) {
+						if ($scope.selectedWidget.parsed_options[x].field_name == fdName) {
+							$scope.selectedWidget.parsed_options[x].retLookupOptions = response.data.retLookupOptions;
+							$scope.selectedWidget.parsed_options[x].trying = false;
+						}
+					}
+				});
+			}
+			retArr.push(tmp);
+		}
+
+		return retArr;
+	}
+
+	$scope.loadThisWidget = function(widgOb) {
+		$scope.selectedWidget = {};
+		$scope.selectedWidget = widgOb;
+		$scope.selectedWidget.fieldModels = {};
+		widgOb.parsed_options = parseMyOptions(widgOb.user_options.value.options);
+	}
+
+	$scope.setRows = function(dataRows) {
+		$scope.rows = dataRows;
+	}
+
+	$scope.popImage = function(e) {
+		$scope.shownImg = e;
+	}
+
+	$scope.toggleEdit = function(e) {
+		$scope.tgEdit = !$scope.tgEdit;
+		/*var init = true;
+		$scope.listener = $scope.$watch('rows', function() {
+			if (!init)
+				$scope.pageModified = true;
+			else
+				init = false;
+		}, true);*/
+		//$scope.rowCopy = $.extend(true, {}, $scope.rows);
+		if ($scope.tgEdit) {
+			$scope.editLabel = 'Save Page Layout';
+			$(e.target).toggleClass('btn-primary');
+			$(e.target).toggleClass('btn-success');
+			$(e.target).blur();
+		}
+		else {
+			$scope.editLabel = 'Edit Page Layout';
+			$(e.target).toggleClass('btn-primary');
+			$(e.target).toggleClass('btn-success');
+			$(e.target).blur();
+			$scope.fireSave();
+		}
+	}	
+
+	$scope.saveSelectedWidget = function() {
+		console.log($scope.selectedWidget);
+		console.log($scope.siblingWidgets);
+		var options = {};
+		for (var x in $scope.selectedWidget.user_options.value.options) {
+			var tmp = $scope.selectedWidget.user_options.value.options[x];
+
+			if (tmp.append) {
+				options[tmp.field_name] = $scope.selectedWidget.fieldModels[tmp.field_name] + tmp.append;
+			}
+			else{
+				options[tmp.field_name] = $scope.selectedWidget.fieldModels[tmp.field_name];
+			}
+		}
+
+		c.server.get({type: 'newWidget', id: $scope.selectedWidget.id, options: options}).then(function(response) {
+			$scope.siblingWidgets.push(response.data.retNewWidget);
+			$scope.pageModified = true;
+		});
+	}
+
+	$scope.enforceValidations = function (field, model) {
+		if (!field || !model)
+			return null;
+
+		if (Object.keys(field.validation).length > 0) {
+			for (var x in field.validation) {
+				if (field.validation.hasOwnProperty(x)) {
+					switch(x) {
+						case 'maxlength':
+							model[field.field_name] = model[field.field_name].toString().substring(0, parseInt(field.validation[x]));
+							break;
+						case 'max':
+							model[field.field_name] = (!model[field.field_name] || model[field.field_name] > parseInt(field.validation[x])) ? parseInt(field.validation[x]) : model[field.field_name];
+							break;
+						case 'min':
+							model[field.field_name] = (!model[field.field_name] || model[field.field_name] < parseInt(field.validation[x])) ? parseInt(field.validation[x]) : model[field.field_name];
+							break;
+					}
+				}
+			}
+		}
+	}
+
+	$scope.fireSave = function() {
+		c.server.get({type: 'save', rows: $scope.rows}).then(function(){
+			$scope.pageModified = false;
+			c.data.defaultSetup = false;
+		});
+	}
+
+	$scope.calculateMyPopoverPlacement = function(col, index, rowIndex) {
+		return 'mouse';
+		if (!col)
+			return 'top';
+
+		if (~col.bootClass.indexOf('col-sm-12'))  //If I'm a full column, popover to the top.
+			return 'top';
+
+		if (is_mobile || is_tablet)
+			return 'mouse';
+
+		var toReturn = '';
+		var mdClass = col.bootClass.split(' ');
+		if (mdClass && mdClass[1] && ~mdClass[1].toString().indexOf('col-sm')) {
+			var temp = mdClass[1].substring(7, mdClass[1].length);
+			var colID = parseInt(mdClass[1].substring(7, mdClass[1].length));
+			switch(colID) {
+				case 2:
+					if (index <= 2)
+						toReturn = 'right';
+					else
+						toReturn = 'left';
+					break;
+				case 3:
+					if (index < 2)
+						toReturn = 'right';
+					else
+						toReturn = 'left';
+					break;
+				case 4:
+					if (index < 2)
+						toReturn = 'right';
+					else
+						toReturn = 'left';
+					break;
+				case 6:
+					if (index == 0)
+						toReturn = 'right';
+					else
+						toReturn = 'left';
+					break;
+			}
+
+			return toReturn;
+		}
+		return 'top';
+	}
+
+	$scope.loadPopupData = function (row, rowIndex, col, colIndex) {
+		var tmp;
+		$scope.popupOb = tmp = {};
+		tmp.canMoveLeft = (colIndex > 0);
+		tmp.canMoveRight = (row.cols[colIndex+1].bootClass != '');
+		tmp.canMoveUp = (rowIndex > 0);
+		tmp.canMoveDown = (typeof $scope.rows[rowIndex+1] != 'undefined')
+		tmp.widgets = col.widgets;
+		tmp.rowIndex = rowIndex;
+		tmp.colIndex = colIndex;
+		tmp.rowOb = row;
+		tmp.canAddWidgets = (col.widgets.length <= MAX_WIDGETS);
+		tmp.hasWidgets = col.widgets.length > 0;
+	}
+
+	$scope.moveMeUp = function (index) {
+		$scope.pageModified = true;
+		var tmp = $scope.rows[index];
+		$scope.rows[index] = $scope.rows[index-1];
+		$scope.rows[index-1] = tmp;
+	}
+	$scope.moveMeDown = function (index) {
+		$scope.pageModified = true;
+		var tmp = $scope.rows[index];
+		$scope.rows[index] = $scope.rows[index+1];
+		$scope.rows[index+1] = tmp;
+	}
+	$scope.moveMeLeft = function(index, row) {
+		$scope.pageModified = true;
+		var tmp = row.cols[index];
+		row.cols[index] = row.cols[index-1];
+		row.cols[index-1] = tmp;
+	}
+	$scope.moveMeRight = function(index, row) {
+		$scope.pageModified = true;
+		var tmp = row.cols[index];
+		row.cols[index] = row.cols[index+1];
+		row.cols[index+1] = tmp;
+	}
+
+	$scope.undo = function(e) {
+		c.server.get({type: 'refresh'}).then(function(response) {
+			$scope.setRows(response.data.userRows);
+			c.data.defaultSetup = response.data.defaultSetup;
+			
+			$scope.tgEdit = !$scope.tgEdit;
+			$scope.pageModified = false;
+			var sib = $(e.target).prev();
+			$scope.editLabel = 'Edit Page Layout';
+			$(sib).toggleClass('btn-primary');
+			$(sib).toggleClass('btn-success');
+		});
+	}
+
+	$scope.restore = function(e) {
+		var conf = confirm('This will delete your setup and restore defaults.\n\nContinue?');
+		if (!conf)
+			return;
+
+		c.server.get({type: 'restore'}).then(function(response) {
+			$scope.setRows(response.data.userRows);
+			c.data.defaultSetup = response.data.defaultSetup;
+			
+			$scope.tgEdit = !$scope.tgEdit;
+			$scope.pageModified = false;			
+			var sib = $(e.target).prev().prev();
+			$scope.editLabel = 'Edit Page Layout';
+			$(sib).toggleClass('btn-primary');
+			$(sib).toggleClass('btn-success');
+		});
+	}
+
+	$scope.setRows(c.data.userRows);
+
+	/*$scope.$watch('mdlCategory', function() {
+		$scope.selectedWidget = {};
+		$scope.allowedOptions = [];
+		$scope.showThisImg = '';
+	});
+	$scope.$on('$locationChangeStart', function(event) {
+		if ($scope.tgEdit && $scope.pageModified) {
+			var conf = confirm("You haven't saved your page yet!\n\nAre you sure you want to leave?");
+			if (!conf)
+				event.preventDefault();
+		}
+	});
+
+	//NG-CLASS and NG-SHOW Functions
+	$scope.showMyArrows = function(e) {
+		var me = $(e.target).find('.arrowsLeftAndRight').fadeIn(400);
+	}
+	$scope.hideMyArrows = function(e) {
+		var me = $(e.target).find('.arrowsLeftAndRight').fadeOut(400);
+	}
+	$scope.canMoveUp = function(index) {
+		return (index != 0)
+	}
+	$scope.canMoveDown = function(index) {
+		return (index < 2 && typeof $scope.rows[index+1] != 'undefined')
+	}
+	$scope.canMoveLeft = function(index, row) {
+		return (index != 0);
+	}
+	$scope.canMoveRight = function(index, row) {
+		var colCount;
+		if (typeof $scope.rows[row] != 'undefined')
+			colCount = $scope.rows[row].colCount;
+		if (colCount)
+			return (index+1 < colCount);
+		return false;
+	}
+	$scope.bannerMenuHasChildren = function() {
+		if (col.bootClass == 'col-md-12') {
+		}
+	}
+	$scope.toggleMenu = function(e){
+		if(e) e.stopPropagation();
+		$scope.showContBox = !$scope.showContBox;
+		if ($scope.showContBox) {
+			//$('#top *').attr('disabled', true);
+			$window.onclick = function(e) {
+				var target = $(e.target);
+				if(!target) return;
+				if(!target.hasClass('popCont') && !target.is($('.popCont').children())){
+					$scope.toggleMenu();
+				}
+			};
+		} else if (!e) {
+			//$('#top *').attr('disabled', false);
+			$window.onclick = null;
+			$scope.$apply();
+		}
+	}
+	$scope.undo = function(e) {
+		$scope.tgEdit = !$scope.tgEdit;
+		//$scope.rowCopy = $scope.rows;
+		if (typeof $scope.listener != 'undefined')
+			$scope.listener();
+		$scope.pageModified = false;
+		$scope.showSpin = true;
+		//$('#top *').attr('disabled', true);
+		var sib = $(e.target).prev();
+		$scope.editLabel = 'Edit Page Layout';
+		$(sib).toggleClass('btn-primary');
+		$(sib).toggleClass('btn-success');
+		c.data.page_builder = c.data.isPageBuilder;
+		c.data.runThis = 'refresh';
+		c.data.pageID = $location.search()['page'];
+		c.server.update().then(function() {
+			$scope.setRows(c.data.userRows);
+			$scope.showSpin = false;
+			//$('#top *').attr('disabled', false);
+		});
+	}
+	$scope.openWidgetDia = function (e, row, col, thisOb) {
+		$scope.showWidgBox = true;
+		$scope.showWidgs = true;
+		//$('#top *').attr('disabled', true);
+		$scope.originatingButton = e.target;
+		$scope.colSize = parseInt(thisOb.bootClass.split('-')[2]);
+		$scope.newWidgRow = row;
+		$scope.newWidgCol = col;
+	}
+	$scope.toggleEdit = function(e) {
+		$scope.tgEdit = !$scope.tgEdit;
+		var init = true;
+		$scope.listener = $scope.$watch('rows', function() {
+			if (!init)
+				$scope.pageModified = true;
+			else
+				init = false;
+		}, true);
+		//$scope.rowCopy = $.extend(true, {}, $scope.rows);
+		if ($scope.tgEdit) {
+			$scope.editLabel = 'Save Page Layout';
+			$(e.target).toggleClass('btn-primary');
+			$(e.target).toggleClass('btn-success');
+		}
+		else {
+			$scope.editLabel = 'Edit Page Layout';
+			$(e.target).toggleClass('btn-primary');
+			$(e.target).toggleClass('btn-success');
+			$scope.fireSave();
+		}
+	}
+	$scope.showThis = function(row, col) {
+		//return (typeof $scope.rows[row].cols[col].widgetOb == 'undefined' || $.isEmptyObject($scope.rows[row].widgets[col].widgetOb));
+		return true;
+	}
+	$scope.getClasses = function () {
+		var classes = ''
+		}
+	$scope.getRowCount = function () {
+		var max = 3;
+		max = max - $scope.rows.length;
+		if (max > 0)
+			return true;
+		return false;
+	}
+	$scope.colClass = function(col, ind, row) {
+		var str = '';
+		if ($scope.tgEdit)
+			str += 'borders ';
+		str += col.bootClass;
+		return str;
+	}
+	function setValues(tmpOb, options) {
+		for (var x in tmpOb.custOptions) {
+			if (tmpOb.custOptions.hasOwnProperty(x)) {
+				var val = options[x];
+				var tmpOb2 = $scope.allowedOptions.filter(function ( tmpOb2 ) {
+					return tmpOb2.name === x;
+				})[0];
+				if (tmpOb2.type == 'number')
+					tmpOb2.value = parseInt(options[x]);
+				else
+					tmpOb2.value = options[x]
+					}
+		}
+	}
+	$scope.showCurrentOptions = function(col, row, thisOb) {
+		$scope.showWidgBox = true;
+		$scope.showWidgs = true;
+		$scope.selectedWidget = $scope.rows[row].widgets[col];
+		$scope.colSize = parseInt(thisOb.bootClass.split('-')[2]);
+		$scope.newWidgRow = row;
+		$scope.newWidgCol = col;
+		//$('#top *').attr('disabled', true);
+		var id = $scope.rows[row].widgets[col].id;
+		var options = $scope.rows[row].widgets[col].options;
+		var tmpOb = c.data.availWidgets.filter(function ( tmpOb ) {
+			return tmpOb.id === id;
+		})[0];
+		$scope.parseCustOptions(tmpOb)
+		for (var x in tmpOb.custOptions) {
+			if (tmpOb.custOptions.hasOwnProperty(x)) {
+				var val = options[x];
+				var tmpOb2 = $scope.allowedOptions.filter(function ( tmpOb2 ) {
+					return tmpOb2.name === x;
+				})[0];
+				if (tmpOb2.type == 'number')
+					tmpOb2.value = parseInt(val);
+				//else if (tmpOb2.type == "imgPicker") {
+				//$('.custOption #' + tmpOb2.name).val(val);
+				//}
+				else
+					tmpOb2.value = val;
+			}
+		}
+	}
+	$scope.isEmpty = function(ob) {
+		if (typeof ob != 'undefined')
+			return (Object.keys(ob).length == 0);
+		else
+			return true
+			}
+
+
+	$scope.addThisWidget = function() {
+		//$('#top *').attr('disabled', false);
+		var widg = $scope.selectedWidget;
+		c.data.id = widg.id;
+		c.data.widgOptions = $scope.concatWidgOptions(widg);
+		c.data.rowId = $scope.newWidgRow;
+		c.data.colId = $scope.newWidgCol;
+		c.data.rows = $scope.rows;
+		$scope.showWidgBox = false;
+		c.data.runThis = 'addWidget';
+		c.server.update().then(function() {
+			$scope.setRows(c.data.userRows);
+		})
+		$scope.cancelWidgetSelection();
+	}
+	$scope.cancelWidgetSelection = function () {
+		//$('#top *').attr('disabled', false);
+		$scope.showWidgBox = false;
+		$scope.selectedWidget = {};
+		$scope.allowedOptions = [];
+		$scope.showThisImg = '';
+		$scope.showWidgOptions = false;
+		$scope.showWidgs = false;
+		$scope.newWidgRow = -1;
+		$scope.newWidgCol = -1;
+	}
+	//END WIDGET ADDITION FUNCTIONS
+	//BEGIN OPTION PARSING / DISPLAY FUNCTIONS
+	$scope.parseCustOptions = function(existing) {
+		$scope.allowedOptions = [];
+		var tmp = [];
+		var index;
+		var widg;
+		if (typeof existing == 'undefined') {
+			widg = $scope.selectedWidget;
+		}
+		else
+			widg = existing;
+		for (var x in widg.custOptions) {
+			if (widg.custOptions.hasOwnProperty(x)) {
+				if (widg.custOptions[x].type == 'lookup' || widg.custOptions[x].type == 'imgPicker') {
+					widg.custOptions[x].trying = true;
+					c.data.lookupOptions = widg.custOptions[x].lookup_data;
+					c.data.runThis = 'lookup';
+					c.server.update().then(function() {
+						widg.custOptions[x].trying = false;
+						if (widg.custOptions[x].type == 'lookup')
+							widg.custOptions[x].lookupOptions = c.data.retLookupOptions;
+						else {
+							widg.custOptions[x].imgs = c.data.retLookupOptions;
+						}
+					});
+				}
+				tmp.push(widg.custOptions[x]);
+			}
+		}
+		$scope.allowedOptions = tmp;
+	}
+	$scope.concatWidgOptions = function(widg) {
+		var tmpOb1 = {}, tmpOb2 = {};
+		if (typeof widg.forcedOptions != 'undefined')
+			tmpOb1 = widg.forcedOptions;
+		if (typeof widg.options != 'undefined')
+			tmpOb1 = widg.options;
+		if (typeof widg.custOptions != 'undefined'){
+			$('.popContWidg2 .panel-body').find('.custOption').each(function(){
+				var id = $(this).attr('id');
+				var val = $(this).val();
+				if (val && id) {
+					var tmpOb = $scope.allowedOptions.filter(function ( tmpOb ) {
+						return tmpOb.name === id;
+					})[0];
+					if (typeof tmpOb != 'undefined' && typeof tmpOb.append != 'undefined' && tmpOb.append.toString() != '')
+						tmpOb2[id] = val + tmpOb.append.toString();
+					else
+						tmpOb2[id] = val;
+				}
+			});
+		}
+		else if ($scope.allowedOptions.length > 0) {
+			$('.popContWidg2 .panel-body').find('.custOption').each(function(){
+				var id = $(this).attr('id');
+				var val = $(this).val();
+				if (val && id) {
+					var tmpOb = $scope.allowedOptions.filter(function ( tmpOb ) {
+						return tmpOb.name === id;
+					})[0];
+					if (typeof tmpOb != 'undefined' && typeof tmpOb.append != 'undefined' && tmpOb.append.toString() != '')
+						tmpOb1[id] = val + tmpOb.append.toString();
+					else
+						tmpOb1[id] = val;
+				}
+			});
+		}
+		return $.extend(tmpOb1, tmpOb2) || tmpOb1 || '';
+	}
+	$scope.popImage = function(e) {
+		$scope.showThisImg = e;
+	}
+	//END OPTION PARSING/DISPLAY FUNCTIONS
+	//BEGIN VIEW MODIFICATION FUNCTIONS
+	$scope.clearEmpties = function() {
+		var temp = [];
+		for (var x = 0; x < $scope.rows.length; x++) {
+			var hasWidgets = false;
+			for (var y = 0; y < $scope.rows[x].widgets.length; y++) {
+				if (!hasWidgets)
+					if (typeof $scope.rows[x].widgets[y].id != 'undefined' && $scope.rows[x].widgets[y].id.toString() != '') {
+						temp.push($scope.rows[x]);
+						hasWidgets = true;
+					}
+			}
+		}
+		if (temp.length < $scope.rows.length) {
+			spUtil.addTrivialMessage('Empty rows will not be saved!');
+		}
+		$scope.rows = temp;
+	}
+	$scope.deleteWidget = function (ind, row) {
+		var className = $scope.rows[row].widgets[ind].bootClass
+		var ob = {bootClass: className};
+		$scope.rows[row].widgets.splice(ind, 1, ob)
+	}
+	$scope.deleteRow = function(index) {
+		if (index >= 0)
+			$scope.rows.splice(index, 1);
+	}
+	$scope.populateColumns = function (row) {
+		var tmpRow = {};
+		var rowType = '';
+		tmpRow.colCount = row.length;
+		tmpRow.widgets = [];
+		for (var i = 0; i < row.length; i++) {
+			var tmpCol = {};
+			tmpCol.bootClass = row[i].bootClass;
+			tmpRow.widgets.push(tmpCol);
+		}
+		if (row.length == 2)
+			if (tmpRow.widgets[0].bootClass == 'col-xs-9')
+				rowType = '9:3';
+			else if (tmpRow.widgets[0].bootClass == 'col-xs-3')
+				rowType = '3:9';
+			else
+				rowType = '6';
+		else {
+			if (row.length == 1)
+				rowType = '12';
+			if (row.length == 3)
+				rowType = '4';
+			if (row.length == 4)
+				rowType = '3';
+			if (row.length == 6)
+				rowType = '2';
+		}
+		tmpRow.rowType = rowType;
+		$scope.rows.unshift(tmpRow);
+	}
+	$scope.moveMeUp = function (index) {
+		var tmp = $scope.rows[index];
+		$scope.rows[index] = $scope.rows[index-1];
+		$scope.rows[index-1] = tmp;
+	}
+	$scope.moveMeDown = function (index) {
+		var tmp = $scope.rows[index];
+		$scope.rows[index] = $scope.rows[index+1];
+		$scope.rows[index+1] = tmp;
+	}
+	$scope.moveMeLeft = function(index, row) {
+		var tmp = $scope.rows[row].widgets[index];
+		$scope.rows[row].widgets[index] = $scope.rows[row].widgets[index-1];
+		$scope.rows[row].widgets[index-1] = tmp;
+	}
+	$scope.moveMeRight = function(index, row) {
+		var tmp = $scope.rows[row].widgets[index];
+		$scope.rows[row].widgets[index] = $scope.rows[row].widgets[index+1];
+		$scope.rows[row].widgets[index+1] = tmp;
+	}
+	//END VIEW MODIFICATION FUNCTIONS
+	//BEGIN SAVE FUNCTIONS
+	$scope.restoreDefault = function(e) {
+		var conf = confirm('This will delete your setup and restore defaults.\n\nContinue?');
+		if (!conf)
+			return;
+		$scope.rows = [];
+		$scope.showSpin = true;
+		$scope.tgEdit = false;
+		var sib = $(e.target).prev().prev();
+		$scope.editLabel = 'Edit Page Layout';
+		$(sib).toggleClass('btn-primary');
+		$(sib).toggleClass('btn-success');
+		$scope.fireSave();
+		//$location.search('id', 'index_dark_theme_tanner');
+		c.data.page_builder = c.data.isPageBuilder;
+c.data.runThis = 'refresh';
+c.server.update().then(function() {
+$scope.setRows(c.data.userRows);
+});
+	}
+	$scope.fireSave = function() {
+		var page;
+		$scope.clearEmpties();
+		//$scope.rowCopy = $scope.rows;
+		if (typeof $scope.listener != 'undefined')
+			$scope.listener();
+		$scope.pageModified = false;
+		$scope.showSpin = true;
+		c.data.rows = $scope.rows;
+		c.data.pageID = page = $location.search()['page'];
+		c.data.runThis = 'save';
+		c.server.update().then(function() {
+			spUtil.addTrivialMessage('Page Format Saved!');
+			c.data.defaultSetup = false;
+			$scope.showSpin = false;
+			if (c.data.success == true) {
+				$location.search({'id': page, 'page': null});
+			}
+		});
+	}
+	//END SAVE FUNCTIONS
+	*/
+}]]></client_script>
+        <controller_as>c</controller_as>
+        <css>$blueColor: #5E88A1;
+$goldColor: #f2e3c0;
+$ashWhite: #f7f7f7;
+$greyColor: #797f85;
+$lightBlue: #00a5d2;
+$otherLightBlue: #7dc5c6;
+$frontZ: 2000;
+$middleZ: 1000;
+$bottomZ: 50;
+$pageZ: 0;
+$borderRad: 6px;
+
+.bordered {
+  border: 2px solid $blueColor;
+  border-radius: $borderRad;
+}
+
+.repeated-item.ng-enter, .repeated-item.ng-move {
+  transition: all 0.5s linear;
+  opacity: 0;
+}
+.repeated-item.ng-enter.ng-enter-active,
+.repeated-item.ng-move.ng-move-active {
+  opacity: 1;
+}
+.repeated-item.ng-leave {
+  animation: 0.5s my_animation;
+}
+@keyframes my_animation {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+.centerMe {
+  margin:10px auto;
+  display:block;
+}
+
+.padding20 {
+  padding-bottom: 10px;
+  padding-top: 10px;
+}
+
+.margin20 {
+  margin-bottom: 10px;
+  margin-top: 10px;
+}
+
+.borderBottom {
+  border-bottom: 1px solid #ddd; 
+}
+
+.borderTop {
+  border-top: 1px solid #ddd; 
+}
+
+.borderLeft {
+  border-left: 1px solid #ddd; 
+}
+
+.borderRight {
+  border-right: 1px solid #ddd; 
+}
+
+.roundedBorder {
+  border-radius: 10px;
+}
+
+.successBackground {
+  background-color: #71c171;
+}
+
+.inline {
+  display: inline;
+}
+
+.icon-bar {
+  width: 95%; /* Full-width */
+  overflow: auto; /* Overflow due to float */
+  margin: auto;
+}
+
+.icon-bar a {
+  float: left; /* Float links side by side */
+  text-align: center; /* Center-align text */
+  width: 33%; /* Equal width (5 icons with 20% width each = 100%) */
+  padding: 12px 0; /* Some top and bottom padding */
+  transition: all 0.3s ease; /* Add transition for hover effects */
+  color: black; /* White text color */
+  font-size: 24px; /* Increased font size */
+}
+
+.icon-bar a:hover {
+  //background-color: #000; /* Add a hover color */
+  //border: 1px solid black;
+}
+
+.popBtn {
+  z-index: 50;
+  width: 100%;
+  min-height: 50px;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+
+  background-color: Transparent;
+  background-repeat:no-repeat;
+  border: none;
+  //cursor:pointer;
+  overflow: hidden;
+  outline:none;
+}
+
+.popover {
+  z-index: 100;
+}
+
+.popover div h3 {
+  margin-bottom: 4px;
+  margin-top: 4px;
+  white-space: pre;
+}
+
+.popover div a {
+  //cursor: default;
+  border-right: 1px solid #ddd;
+}
+
+.popover div a:last-child {
+  border: none;
+}
+
+.popover div a i {
+  //cursor: pointer;
+}
+
+.popover div button {
+  margin-top: 20px; 
+}
+
+.disabledLink {
+  opacity: 0.5;
+    cursor: not-allowed;
+  i {
+    opacity: 0.5;
+    //cursor: default;
+  }
+}
+
+.minHeight300 {
+  min-height: 300px;
+}
+
+.blueBackground {
+  background-color: blue;
+}
+/*
+
+.row {
+margin-left: 0;
+margin-right: 0;
+}
+.whiteBackground {
+//background-color: rgba(247, 247, 247, .8)
+}
+.evenRow {
+// background-color: rgba(0, 165, 210, .5)
+//background-color: $lightBlue;
+}
+.oddRow {
+//background-color: rgba(125, 197, 198, .5);
+//background-color: $otherLightBlue;
+}
+.editBtnDiv {
+display: inline-block;
+margin-bottom: 1vw;
+}
+.buildRow {
+//z-index: -1;
+}
+.editBtnDiv .btn {
+margin-top: 3px;
+}
+.addNewCont .tPop {
+color: $ashWhite;
+background-color: $blueColor;
+}
+.spinner {
+position: fixed;
+top:20%;
+bottom: 0;
+left: 0;
+right: 0;
+background-color: $ashWhite;
+-webkit-box-shadow: -1px 1px 5px 9px $ashWhite;
+-moz-box-shadow: -1px 1px 5px 9px $ashWhite;
+box-shadow: -1px 1px 5px 9px $ashWhite;
+margin-left: auto;
+margin-right: auto;
+//z-index: $frontZ;
+width: 15vw;
+height: 15vw;
+text-align: center;
+vertical-align: middle;
+}
+.spinner .spinning {
+margin: auto;
+margin-top: 1.25vw;
+margin-bottom: 1.25vw;
+font-size: 12vw;
+}
+.glyphicon-refresh {
+animation: spin .4s infinite linear;
+-webkit-animation: spin2 .4s infinite linear;
+color: $greyColor;
+}
+@keyframes spin {
+from { transform: scale(1) rotate(0deg); }
+to { transform: scale(1) rotate(360deg); }
+}
+@-webkit-keyframes spin2 {
+from { -webkit-transform: rotate(0deg); }
+to { -webkit-transform: rotate(360deg); }
+}
+.page {
+padding-top: 0 !important;
+}
+.addNewCont {
+position: relative;
+margin-left: auto;
+margin-right: auto;
+left: 0;
+right: 0;
+text-align: center;
+//z-index: $pageZ;
+}
+.dscSpan {
+background: #fff !important;
+border-radius: $borderRad;
+padding: 5px;
+margin-bottom: 1vw;
+}
+.rowMenu {
+display: inline-block;
+background-color: $goldColor;
+border: 2px solid $greyColor;
+border-radius: $borderRad $borderRad 0 0;
+border-bottom: none;
+padding: 10px;
+}
+.rowMenu * {
+vertical-align: middle !important;
+margin-left: 1vw;
+margin-right: 1vw;
+}
+.rowMenuContainer {
+margin-bottom: -2px !important;
+border: 2px;
+border-color: $greyColor;
+}
+.bannerMenu {
+display: inline-block;
+position: absolute;
+top: 0;
+right: 0;
+z-index: 1;
+padding: 5px;
+background-color: $goldColor;
+border: 2px solid $blueColor;
+border-radius: 0 $borderRad 0 $borderRad;
+border-top: none;
+border-right: none;
+}
+.bannerMenu * {
+margin-left: .5vw;
+margin-right: .5vw;
+}
+.row.ng-move,
+.row.ng-enter,
+.row.ng-leave {
+-webkit-transition:all linear 0.5s;
+transition:all linear 0.5s;
+}
+.row.ng-leave.ng-leave-active,
+.row.ng-move,
+.row.ng-enter {
+opacity:0;
+}
+.row.ng-leave,
+.row.ng-move.ng-move-active,
+.row.ng-enter.ng-enter-active {
+opacity:1;
+}
+.cog {
+color: #808080;
+font-size: 36px;
+cursor: pointer;
+}
+.arrowDiv {
+background-color: $ashWhite;
+}
+.arrows {
+font-size: 36px;
+color: $blueColor;
+cursor: pointer;
+border: 0;
+border-radius: 99%;
+background-color: $ashWhite;
+}
+.arrowsLeftAndRight {
+vertical-align: middle;
+}
+.blurClass {
+-webkit-filter: blur(5px);
+-moz-filter: blur(5px);
+-o-filter: blur(5px);
+-ms-filter: blur(5px);
+filter: blur(5px);
+pointer-events: none !important;
+}
+.popContWidg2 .avail {
+//border-radius: $borderRad $borderRad 0 0;
+border-radius: $borderRad;
+background-color: $ashWhite;
+margin-left: auto;
+margin-right: auto;
+width: 80%;
+margin-top: 1vw;
+}
+.popContWidg2 .avail tbody {
+max-height: 89%;
+overflow-y: auto;
+}
+.table &gt; thead &gt; tr &gt; th {
+border: 0;
+}
+.widgBtnOptions {
+position: absolute;
+bottom: 0;
+right: 0;
+}
+.popContWidg2 .avail tr, .popCont .rows-item tr {
+cursor: pointer;
+}
+.popContWidg2 .avail tr td span {
+color: $blueColor;
+}
+.popContWidg2 .avail td {
+text-align: center;
+background-color: $ashWhite;
+}
+td:last-child {
+border-radius: 0 0 $borderRad $borderRad !important;
+}
+.popContWidg .options {
+border-radius: $borderRad;
+}
+.popContWidg .options .custOption {
+width: 100%
+}
+.popContWidg2 .options td, .popContWidg2 .options tr, .popContWidg2 .options th {
+border: none;
+}
+.popContWidg2 .table {
+margin-bottom: 1vw;
+margin-left: 0;
+margin-right: 0;
+width: 100%;
+}
+.popContWidg2 &gt; .row {
+//z-index: 2000;
+}
+.optFoot {
+//background-color: #fff;
+//z-index: 2000;
+}
+.delText {
+margin-left: auto;
+margin-right: auto;
+}
+#builder {
+text-align: center;
+}
+.btnRemoveThis {
+border-radius: $borderRad;
+}
+.show-hide {
+transition: all linear .2s;
+}
+.show-hide.ng-hide {
+opacity: 0;
+}
+.row {
+margin-bottom: 2vw;
+}
+.tPop {
+margin-bottom: 2vw;
+}
+.glyphNewCont {
+vertical-align: middle;
+font-size: 4em;
+}
+.centCont {
+//text-align: center;
+vertical-align: middle;
+//z-index: -1;
+}
+.borders {
+border-style: solid;
+border-color: $greyColor;
+border-width: 2px;
+border-radius: $borderRad;
+min-height: 5vw;
+}
+.popover-content .col-item {
+margin: 6px 3px 6px 0;
+height: 35px;
+border: 2px solid white;
+text-align: center;
+background: $goldColor;
+}
+.popover-content .rows-list {
+display: block;
+padding: 0;
+list-style-type: none;
+}
+.popover-content .rows-item {
+width: 100%;
+margin: 5px 0px 5px 0px;
+}
+.popCont {
+position: fixed;
+top:15%;
+left: 10%;
+right: 10%;
+margin-left: auto;
+margin-right: auto;
+width: 70vw;
+//z-index: $frontZ;
+font-family: "SourceSansPro",Helvetica,Arial,sans-serif;
+font-style: normal;
+font-weight: normal;
+letter-spacing: normal;
+line-break: auto;
+line-height: 1.42857;
+text-align: left;
+text-align: start;
+text-decoration: none;
+text-shadow: none;
+text-transform: none;
+white-space: normal;
+word-break: normal;
+word-spacing: normal;
+word-wrap: normal;
+font-size: 14px;
+background-color: $blueColor;
+background-clip: padding-box;
+border: 1px solid #ccc;
+border: 1px solid rgba(0,0,0,0.2);
+border-radius: $borderRad;
+-webkit-box-shadow: 0 5px 10px rgba(0,0,0,0.2);
+box-shadow: 0 5px 10px rgba(0,0,0,0.2);
+}
+.popContWidg2 {
+position: fixed;
+top: 15%;
+//bottom: 0;
+left: 5%;
+right: 5%;
+z-index: 2;
+width: 90vw;
+}
+.popCont &gt; .row {
+max-height: 40vw !important;
+overflow-y: auto;
+}
+.popContWidg2 &gt; .row {
+margin-bottom: 0;
+}
+.popContWidg2 &gt; .row {
+max-height: 60vw !important;
+overflow-y: auto;
+}
+.popContWidg2 .clearfix {
+background-color: $blueColor;
+border: none;
+}
+.popContWidg2 .row {
+background-color: $blueColor;
+}
+.popover.bottom&gt;.arrow {
+left: 50%;
+margin-left: -11px;
+border-top-width: 0;
+border-bottom-color: #999;
+border-bottom-color: rgba(0,0,0,0.25);
+top: -11px;
+}
+.popover&gt;.arrow {
+border-width: 11px;
+}
+.popover&gt;.arrow,.popover&gt;.arrow:after {
+position: absolute;
+display: block;
+width: 0;
+height: 0;
+border-color: transparent;
+border-style: solid;
+}
+.popover-title {
+margin: 0;
+padding: 8px 14px;
+font-size: 14px;
+background-color: $ashWhite;
+border-bottom: 1px solid #ebebeb;
+border-radius: $borderRad $borderRad 0 0;
+}
+.popover-content {
+padding: 0;
+width: 98%;
+color: $greyColor;
+margin: auto;
+}
+.popover-content {
+//padding: 9px 14px;
+}
+.availRow.ng-move,
+.availRow.ng-enter,
+.availRow.ng-leave {
+-webkit-transition:all linear 0.2s;
+transition:all linear 0.2s;
+}
+.availRow.ng-leave.ng-leave-active,
+.availRow.ng-move,
+.availRow.ng-enter {
+opacity:0;
+}
+.availRow.ng-leave,
+.availRow.ng-move.ng-move-active,
+.availRow.ng-enter.ng-enter-active {
+opacity:1;
+}
+@media screen and (max-width: 767px) {
+.popContWidg2 &gt; .row {
+max-height: 500px !important;
+overflow-y: auto;
+}
+.popContWidg2 {
+position: absolute;
+top: 0%;
+//bottom: 0;
+left: 5%;
+right: 5%;
+//z-index: $frontZ;
+width: 90vw;
+}
+.popContWidg2 &gt; .row &gt; .col-xs-12 {
+padding-bottom: 0 !important;
+}
+.centCont {
+margin-top: 10px;
+}
+.centCont:nth-child(2) {
+margin-top: 0;
+}
+.popCont {
+position: absolute;
+top:0%;
+left: 5%;
+right: 5%;
+margin-left: auto;
+margin-right: auto;
+width: 90vw;
+}
+.popCont &gt; .row {
+max-height: 400px !important;
+overflow-y: auto;
+}
+}
+@media screen and (max-width: 320px) {
+.popContWidg2 &gt; .row {
+max-height: 500px !important;
+overflow-y: auto;
+}
+.popContWidg2 &gt; .row &gt; .col-xs-12 {
+padding-bottom: 0 !important;
+}
+.centCont {
+margin-top: 10px;
+}
+.centCont:nth-child(2) {
+margin-top: 0;
+}
+.popCont {
+position: absolute;
+top:0%;
+left: 5%;
+right: 5%;
+margin-left: auto;
+margin-right: auto;
+width: 90vw;
+}
+.popCont &gt; .row {
+max-height: 400px !important;
+overflow-y: auto;
+}
+}
+*/</css>
+        <data_table>sp_instance</data_table>
+        <demo_data/>
+        <description/>
+        <docs/>
+        <field_list/>
+        <has_preview>false</has_preview>
+        <id>page_builder</id>
+        <internal>false</internal>
+        <link/>
+        <name>Page Builder</name>
+        <option_schema/>
+        <public>false</public>
+        <roles/>
+        <script><![CDATA[
+(function() {
+	/* populate the 'data' object */
+	/* e.g., data.table = $sp.getValue('table'); */
+	//data.isPageBuilder = $sp.getParameter('id').toString().toLowerCase() == 'page_builder';
+	var helper = new ServicePortalCustomizerServerLogic();
+	var pgBuildName = spCustomizer.CUSTOMIZER_PAGE_NAME;
+	var thisPage = $sp.getParameter('id').toString().toLowerCase()
+	data.isPageBuilder = (thisPage == pgBuildName.toLowerCase())
+	var pageSys;
+	thisPage = (data.isPageBuilder) ? $sp.getParameter('tbName') : thisPage;
+
+	if (input) {
+		if (input.type == 'option_lookup' && input.lookup_ob) {
+			data.retLookupOptions = helper.getLookupValues(input.lookup_ob, $sp);
+		}
+
+		if (input.type == 'newWidget' && input.id) {
+			data.retNewWidget = $sp.getWidget(input.id, input.options || {});
+		}
+
+		if (input.type == 'save' && input.rows) {
+			helper.fireSave(input.rows, gs.getUserID(), $sp.getParameter('tbName'));
+		}
+
+		if (input.type == 'refresh') {
+			data.defaultSetup = false;
+			pageSys = helper._lookupPage(thisPage);
+			data.userRows = helper.getUserRows(thisPage, $sp, false, pageSys);
+			if (data.userRows.length == 0) {
+				data.userRows = helper.getUserRows(thisPage, $sp, true, pageSys);
+				data.defaultSetup = true;
+			}
+		}
+
+		if (input.type == 'restore') {
+			helper.fireSave([], gs.getUserID(), $sp.getParameter('tbName'));
+			data.userRows = helper.getUserRows(thisPage, $sp, true);
+			data.defaultSetup = true;
+		}
+
+		return;
+	}
+
+	data.userRows = [];
+	data.availWidgets = [];
+	data.rowTypes = [];
+	pageSys = helper._lookupPage(thisPage);
+
+	data.availWidgets = helper.loadAvailableWidgets();
+	data.userRows = helper.getUserRows(thisPage, $sp, false, pageSys);
+	if (data.userRows.length == 0) {
+		data.userRows = helper.getUserRows(thisPage, $sp, true, pageSys);
+		data.defaultSetup = true;
+	}
+
+	data.rowTypes = helper.getRowTypes();
+
+
+	/*if (typeof input != 'undefined' && Object.keys(input).length > 0) {
+		if (typeof input.rows != 'undefined')
+			userRows = input.rows;
+		if (typeof input.runThis != 'undefined') {
+			if (input.runThis == 'save')
+				saveMe(userRows, input.pageID);
+			else if (input.runThis == 'addWidget') {
+				if (typeof input.id != 'undefined' && typeof input.widgOptions != 'undefined' &&
+						typeof input.rowId != 'undefined' && typeof input.colId != 'undefined') {
+					var tmpOb = userRows[input.rowId].widgets[input.colId];
+					tmpOb.id = input.id;
+					tmpOb.options = input.widgOptions;
+					tmpOb.widgetOb = $sp.getWidget(input.id, input.widgOptions);
+					data.userRows = userRows;
+				}
+			}
+			else if (input.runThis == 'lookup') {
+				if (typeof input.lookupOptions != 'undefined') {
+					data.retLookupOptions = getLookupValues(input.lookupOptions);
+				}
+			}
+			else if (input.runThis == 'refresh') {
+				if (typeof input.page_builder != 'undefined')
+					data.isPageBuilder = Boolean(input.page_builder);
+				initialPopulation(data.isPageBuilder);
+			}
+			else if (input.runThis == 'loadWidg') {
+				loadAvailWidgets();
+			}
+		}
+	}
+	else {
+		data.isPageBuilder = $sp.getParameter('id').toString().toLowerCase() == 'page_builder';
+		initialPopulation(data.isPageBuilder);
+	}
+	*/
+})();
+/*function loadAvailWidgets() {
+	var widgets = [];
+	var categories = [];
+	var widgGR = new GlideRecord('u_sp_demo_customer_facing_widgets');
+	widgGR.addQuery('u_active', true);
+	widgGR.query();
+	while(widgGR.next()) {
+		var tmpWidget = {};
+		tmpWidget.id = widgGR.u_widget.id.toString();
+		tmpWidget.name = widgGR.u_widget.name.toString();
+		tmpWidget.label = widgGR.u_widget_label.toString();
+		tmpWidget.roles = widgGR.u_available_to_roles.toString();
+		tmpWidget.minSize = parseInt(widgGR.u_min_size.toString());
+		if (!userCanSee(tmpWidget.roles))
+			continue;
+		tmpWidget.category = widgGR.u_category.getDisplayValue().toString();
+		tmpWidget.description = widgGR.u_description.toString();
+		if (categories.indexOf(tmpWidget.category) == -1)
+			categories.push(tmpWidget.category);
+		try {
+			if (typeof widgGR.u_default_options != 'undefined' && widgGR.u_default_options.toString() != '')
+				tmpWidget.forcedOptions = JSON.parse(widgGR.u_default_options);
+			else
+				tmpWidget.forcedOptions = {};
+			if (typeof widgGR.u_customer_options != 'undefined' && widgGR.u_customer_options.toString() != '')
+				tmpWidget.custOptions = JSON.parse(widgGR.u_customer_options);
+			else
+				tmpWidget.custOptions = {};
+		}
+		catch(err) {
+			gs.addErrorMessage('Error loading ' + tmpWidget.label + '!');
+			continue;
+		}
+		widgets.push(tmpWidget);
+	}
+	data.availWidgets = widgets;
+	data.categories = categories;
+}*/
+function initialPopulation(pgBuild) {
+	if (pgBuild)
+		var pageName = $sp.getParameter('page') || input.pageID;
+	else
+		var pageName = $sp.getParameter('id');
+
+	/*
+	var userRows = [];
+	var contGR = new GlideRecord('u_sp_demo_my_widgets');
+	contGR.addQuery('u_user', gs.getUserID());
+	contGR.orderBy('u_row.u_row_order');
+	contGR.addQuery('u_row.u_row_pagename', pageName.toString());
+	contGR.query(); 
+	var rowIndex = 0;
+	while (contGR.next()) {
+		var tmpRow = {};
+		tmpRow.sys_id = contGR.u_row.toString();
+		tmpRow.colCount = parseInt(contGR.u_row.u_row_columns);
+		tmpRow.rowType = contGR.u_row.u_row_type.toString();
+		tmpRow.initialIndex = parseInt(contGR.u_row.u_row_order);
+		if (tmpRow.rowType == '9:3')
+			tmpRow.nineThree = true;
+		else if (tmpRow.rowType == '3:9') {
+			tmpRow.threeNine = true;
+		}
+		else
+			tmpRow.className = getClass(tmpRow.rowType);
+		var colArr = [];
+		for (var i = 1; i <= tmpRow.colCount; i++) {
+			var tmpColOb = {};
+			tmpColOb.id = contGR['u_col' + i + '_widget_id'].toString();
+			if (typeof tmpColOb.id != 'undefined' && tmpColOb.id.toString() != '') {
+				tmpColOb.options = JSON.parse(contGR['u_col' + i + '_widget_options'].toString());
+				if (typeof tmpColOb.options != 'undefined')
+					tmpColOb.widgetOb = $sp.getWidget(tmpColOb.id, tmpColOb.options);
+				else
+					tmpColOb.widgetOb = $sp.getWidget(tmpColOb.id, {});
+			}
+			if (tmpRow.nineThree)
+				if (i == 1)
+					tmpColOb.bootClass = 'col-md-9';
+				else
+					tmpColOb.bootClass = 'col-md-3';
+			else if (tmpRow.threeNine)
+				if (i == 1)
+					tmpColOb.bootClass = 'col-md-3';
+				else
+					tmpColOb.bootClass = 'col-md-9'
+					else
+						tmpColOb.bootClass = tmpRow.className;
+			colArr.push(tmpColOb);
+		}
+		tmpRow.widgets = colArr;
+		userRows.push(tmpRow);
+	}*/
+	if (userRows.length == 0) {
+		userRows = fireDefault(pgBuild);
+		data.defaultSetup = true;
+	}
+	else
+		data.defaultSetup = false;
+	if (pgBuild)
+		loadAvailWidgets();
+	data.origRowCount = userRows.length;
+	data.models = {}
+	var row = {}
+	data.models.columns = [];
+	genRows(data.models.columns);
+	data.userRows = userRows;
+}
+function fireDefault(pgBuild) {
+	if (pgBuild)
+		var pageName = $sp.getParameter('page') || input.pageID;
+	else
+		var pageName = $sp.getParameter('id');
+	var userRows = [];
+	var contGR = new GlideRecord('u_sp_demo_my_widgets');
+	contGR.addNullQuery('u_user');
+	contGR.orderBy('u_row.u_row_order');
+	contGR.addQuery('u_row.u_row_pagename', pageName.toString());
+	contGR.query();
+	var rowIndex = 0;
+	while (contGR.next()) {
+		var tmpRow = {};
+		tmpRow.sys_id = contGR.u_row.toString();
+		tmpRow.colCount = parseInt(contGR.u_row.u_row_columns);
+		tmpRow.rowType = contGR.u_row.u_row_type.toString();
+		tmpRow.initialIndex = parseInt(contGR.u_row.u_row_order);
+		if (tmpRow.rowType == '9:3')
+			tmpRow.nineThree = true;
+		else if (tmpRow.rowType == '3:9') {
+			tmpRow.threeNine = true;
+		}
+		else
+			tmpRow.className = getClass(tmpRow.rowType);
+		var colArr = [];
+		for (var i = 1; i <= tmpRow.colCount; i++) {
+			var tmpColOb = {};
+			tmpColOb.id = contGR['u_col' + i + '_widget_id'].toString();
+			if (typeof tmpColOb.id != 'undefined' && tmpColOb.id.toString() != '') {
+				tmpColOb.options = JSON.parse(contGR['u_col' + i + '_widget_options'].toString());
+				if (typeof tmpColOb.options != 'undefined')
+					tmpColOb.widgetOb = $sp.getWidget(tmpColOb.id, tmpColOb.options);
+				else
+					tmpColOb.widgetOb = $sp.getWidget(tmpColOb.id, {});
+			}
+			if (tmpRow.nineThree)
+				if (i == 1)
+					tmpColOb.bootClass = 'col-md-9';
+				else
+					tmpColOb.bootClass = 'col-md-3';
+			else if (tmpRow.threeNine)
+				if (i == 1)
+					tmpColOb.bootClass = 'col-md-3';
+				else
+					tmpColOb.bootClass = 'col-md-9'
+					else
+						tmpColOb.bootClass = tmpRow.className;
+			colArr.push(tmpColOb);
+		}
+		tmpRow.widgets = colArr;
+		userRows.push(tmpRow);
+	}
+	return userRows;
+}
+function userCanSee(roleList) {
+	var roleArr = roleList.split(',');
+	if (roleArr.length == 0)
+		return true;
+	var checker = false;
+	for (var x in roleArr) {
+		if (checker)
+			return checker;
+		checker = gs.getUser().hasRole(roleArr[x]);
+	}
+	return checker
+}
+function getClass(type) {
+	var className;
+	switch(type) {
+		case '12':
+			className = 'col-md-12';
+			break;
+		case '6':
+			className = 'col-md-6';
+			break;
+		case '4':
+			className = 'col-md-4';
+			break;
+		case '3':
+			className = 'col-md-3';
+			break;
+		case '2':
+			className = 'col-md-2';
+	}
+	return className;
+}
+function getLookupValues(ob) {
+	if (!ob.tableName || !ob.filter || !ob.displayField || !ob.valueField)
+		return;
+	var retArr = [];
+	var gr = new GlideRecord(ob.tableName);
+	gr.addEncodedQuery(ob.filter);
+	gr.query();
+	while (gr.next()) {
+		if (!$sp.canReadRecord("ob.tableName", gr.sys_id.getDisplayValue()))
+			continue;
+		var tmpOb = {};
+		tmpOb.displayValue = gr[ob.displayField].toString();
+		tmpOb.value = gr[ob.valueField].toString();
+		retArr.push(tmpOb);
+	}
+	return retArr;
+}
+function genRows(ob) {
+	ob.push([{lbl: '12', vl:12, bootClass: 'col-md-12'}])
+	ob.push([{lbl: '6', vl:6, bootClass: 'col-md-6'},{lbl: '6', vl:6, bootClass: 'col-md-6'}])
+	ob.push([{lbl: '9', vl:9, bootClass: 'col-md-9'},{lbl:'3', vl:3, bootClass: 'col-md-3'}])
+	ob.push([{lbl: '3', vl:3, bootClass: 'col-md-3'},{lbl:'9', vl:9, bootClass: 'col-md-9'}])
+	ob.push([{lbl: '4', vl:4, bootClass: 'col-md-4'},{lbl: '4', vl:4, bootClass: 'col-md-4'},{lbl: '4', vl:4, bootClass: 'col-md-4'}])
+	ob.push([{lbl: '3', vl:3, bootClass: 'col-md-3'},{lbl: '3', vl:3, bootClass: 'col-md-3'},{lbl: '3', vl:3, bootClass: 'col-md-3'},{lbl: '3', vl:3, bootClass: 'col-md-3'}])
+	ob.push([{lbl: '2', vl:2, bootClass: 'col-md-2'},{lbl: '2', vl:2, bootClass: 'col-md-2'},{lbl: '2', vl:2, bootClass: 'col-md-2'},
+					 {lbl: '2', vl:2, bootClass: 'col-md-2'},{lbl: '2', vl:2, bootClass: 'col-md-2'},{lbl: '2', vl:2, bootClass: 'col-md-2'}])
+}
+function saveMe(userRows, pageName) {
+	try {
+		var currUser = gs.getUserID();
+		if (currUser.toString() == '')
+			return;
+		var grRowDel = new GlideRecord('u_sp_demo_my_containers');
+		grRowDel.addQuery('u_user', currUser);
+		grRowDel.deleteMultiple();
+		var grColDel = new GlideRecord('u_sp_demo_my_widgets');
+		grColDel.addQuery('u_user', currUser);
+		grColDel.deleteMultiple();
+		var grRowAdd = new GlideRecord('u_sp_demo_my_containers');
+		var grColAdd = new GlideRecord('u_sp_demo_my_widgets');
+		for (var x in userRows) {
+			var rowCount = parseInt(userRows[x].colCount);
+			var hasWidgets = false;
+			for (var y = 0; y < userRows[x].widgets.length; y++) {
+				if (!hasWidgets)
+					if (userRows[x].widgets[y].id.toString() != '')
+						hasWidgets = true;
+			}
+			grRowAdd.initialize();
+			grRowAdd.u_row_columns = rowCount;
+			grRowAdd.u_row_type = userRows[x].rowType.toString();
+			grRowAdd.u_row_order = x;
+			grRowAdd.u_row_pagename = pageName;
+			grRowAdd.u_user = currUser;
+			if (hasWidgets) {
+				var tmpSys = grRowAdd.insert();
+				if (tmpSys) {
+					grColAdd.initialize();
+					grColAdd.u_user = currUser;
+					grColAdd.u_row = tmpSys;
+					for (var i = 0; i < rowCount; i++) {
+						var tmpAccessor = i + 1;
+						grColAdd['u_col' + tmpAccessor + '_widget_id'] = userRows[x].widgets[i].id.toString();
+						grColAdd['u_col' + tmpAccessor + '_widget_options'] = JSON.stringify(userRows[x].widgets[i].options);
+					}
+					grColAdd.insert();
+				}
+			}
+		}
+		data.success = true;
+	}
+	catch(err) {
+		data.success = false;
+	}
+}
+function isEmpty(ob) {
+	if (typeof ob != 'undefined')
+		return (Object.keys(ob).length == 0);
+	else
+		return true
+		}]]></script>
+        <servicenow>false</servicenow>
+        <sys_class_name>sp_widget</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2017-10-06 15:22:58</sys_created_on>
+        <sys_id>2e2adfcfdb290300e9cbfbefbf9619e9</sys_id>
+        <sys_mod_count>248</sys_mod_count>
+        <sys_name>Page Builder</sys_name>
+        <sys_package display_value="Service Portal Customizer" source="x_60289_service_po">848abecfdbe50300e9cbfbefbf961941</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Service Portal Customizer">848abecfdbe50300e9cbfbefbf961941</sys_scope>
+        <sys_update_name>sp_widget_2e2adfcfdb290300e9cbfbefbf9619e9</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-10-13 21:27:07</sys_updated_on>
+        <template><![CDATA[<div id="top">
+  <div ng-if="data.isPageBuilder">
+    <button class="btn btn-primary btn-lg edit" ng-click="toggleEdit($event)">{{editLabel}}</button>
+    <button class="btn btn-warning btn-lg show-hide" ng-show="tgEdit && pageModified" ng-click="undo($event)">${Revert}</button>
+    <button class="btn btn-danger btn-lg show-hide" ng-show="tgEdit && !data.defaultSetup" ng-click="restore($event)">${Restore Default}</button>
+  </div>
+  <div ng-show="tgEdit && rows.length < maxRows" class="borderBottom">
+    <div>
+      <h4 class="text-active">${Click below to select the grid style for this row}</h4>
+    </div>
+    <button class="btn btn-lg btn-primary" ng-click="popModalNewRow()"><i class="fa fa-plus-circle text-active"></i></button>
+  </div>
+  <div id="builder">
+    <div class="row repeated-item" ng-class="{'padding20 margin20 borderBottom borderTop minHeight100': tgEdit}" ng-repeat="(rowIndex, row) in rows">
+      <div class="centCont repeated-item {{col.bootClass}}" ng-class="{'borderLeft borderRight minHeight300 successBackground roundedBorder': tgEdit}" ng-repeat="col in row.cols" ng-if="col.bootClass">
+        <sp-widget class="show-hide" ng-show="rows[rowIndex].cols[$index].widgets.length > 0" ng-repeat="widg in rows[rowIndex].cols[$index].widgets" widget="widg"></sp-widget>
+        <!--<button class="btn btn-lg btn-primary centerMe" ng-click="popWidgetCTRLModal(rows[rowIndex].cols[$index])" ng-show="tgEdit"><i class="fa fa-plus-circle text-active"></i></button>-->
+        <button ng-if="tgEdit" class="popBtn" uib-popover-template="rowWidgetPopoverOb.templateUrl" popover-placement="{{calculateMyPopoverPlacement(col, $index, rowIndex)}}"popover-animation="true"
+                popover-trigger="focus" popover-popup-close-delay="50" ng-click="loadPopupData(row, rowIndex, col, $index)"></button>
+      </div>
+    </div>
+  </div>
+</div>
+<script type="text/ng-template" id="rowWidgetPopover.html">
+  <div class="clearfix row" style="width: 200px; text-align: center;" >
+  	<h3><span><b>${Row Controls}</b></span></h3>
+      <div class="icon-bar" style="text-align: center;"> 
+        <a href ng-click="moveMeUp(popupOb.rowIndex)" ng-class="{'disabledLink': !popupOb.canMoveUp}"><i class="fa fa-arrow-up"></i></a>
+        <a href="#" ng-click="moveMeDown(popupOb.rowIndex)" ng-class="{'disabledLink': !popupOb.canMoveDown}"><i class="fa fa-arrow-down"></i></a> 
+        <a href="#"><i class="fa fa-remove"></i></a>
+  		</div>
+      <hr/>
+      <h3><span><b>${Column Controls}</b></span></h3>
+      <div class="icon-bar"> 
+        <a href="#" ng-click="moveMeLeft(popupOb.colIndex, popupOb.rowOb)" ng-class="{'disabledLink': !popupOb.canMoveLeft}"><i class="fa fa-arrow-left"></i></a>
+        <a href="#" ng-click="moveMeRight(popupOb.colIndex, popupOb.rowOb)" ng-class="{'disabledLink': !popupOb.canMoveRight}"><i class="fa fa-arrow-right"></i></a> 
+        <a href="#"><i class="fa fa-remove"></i></a>
+  		</div>
+      <button style="100%;" ng-if="popupOb.canAddWidgets" class="btn btn-lg btn-primary">Add Widget</button>
+      <button style="100%;" ng-if="popupOb.hasWidgets" class="btn btn-lg btn-info">Manage Widgets</button>
+  </div>
+</script>]]></template>
+    </sp_widget>
+</record_update>

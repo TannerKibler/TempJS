@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<database>
+    <element label="Custom User Containers" max_length="40" name="x_60289_service_po_custom_user_containers" type="collection">
+        <element label="Default" max_length="40" name="default" type="boolean"/>
+        <element default="0" label="Order" mandatory="true" max_length="10" name="order" type="integer"/>
+        <element label="Page" mandatory="true" max_length="32" name="page" reference="sp_page" type="reference"/>
+        <element label="Row Type" mandatory="true" max_length="32" name="row_type" reference="x_60289_service_po_row_type" type="reference"/>
+        <element label="Row User" max_length="32" name="row_user" reference="sys_user" type="reference"/>
+        <index name="index">
+            <element name="row_type"/>
+        </index>
+        <index name="index2">
+            <element name="page"/>
+        </index>
+        <index name="index3">
+            <element name="row_user"/>
+        </index>
+    </element>
+</database>

@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sp_ng_template">
+    <sp_ng_template action="INSERT_OR_UPDATE">
+        <id>widgetCTRLModal</id>
+        <sp_widget display_value="Page Builder">2e2adfcfdb290300e9cbfbefbf9619e9</sp_widget>
+        <sys_class_name>sp_ng_template</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2017-10-07 19:25:43</sys_created_on>
+        <sys_id>f04bd96fdba14300e9cbfbefbf9619fa</sys_id>
+        <sys_mod_count>40</sys_mod_count>
+        <sys_name>widgetCTRLModal</sys_name>
+        <sys_package display_value="Service Portal Customizer" source="x_60289_service_po">848abecfdbe50300e9cbfbefbf961941</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Service Portal Customizer">848abecfdbe50300e9cbfbefbf961941</sys_scope>
+        <sys_update_name>sp_ng_template_f04bd96fdba14300e9cbfbefbf9619fa</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-10-11 18:40:55</sys_updated_on>
+        <template><![CDATA[<div class="panel panel-default">
+  <div class="panel-heading">
+    <h4 class="panel-title">${Select a grid layout for this row}</h4>
+  </div>
+  <div class="panel-body wrapper-x1">
+    <div class="row">
+      <div class="col-xs-12 col-md-4">
+        <select class="form-control" ng-model="mdlCategory" ng-options="cat.value as cat.label for cat in categories"></select>
+        <table class="table-responsive table table-hover">
+          <tbody>
+            <tr ng-repeat="widg in availWidgets | filter: fltAvail" ng-click="loadThisWidget(widg)">
+              <td><span>{{widg.display_name.display}}</span></td>
+            </tr>
+        </table>
+      </div>
+      <div class="col-xs-12 col-md-8">
+        <span ng-bind-html="trustHTML(selectedWidget.description.display)"></span>
+        <table class="table table-responsive table-hover options">
+          <tbody>
+            <tr ng-repeat="field in selectedWidget.parsed_options">
+              <td width="30%" class="labelCell">
+                <label ng-attr-for="{{field.field_name}}" ng-attr-title="{{field.hint}}">{{field.display_name}}</label>
+              </td>
+              <td width="70%" class="inputCell" ng-show="!field.trying">
+                <input class="form-control" ng-if="field.type != 'lookup' && field.type != 'imgPicker'" ng-attr-type="{{field.type}}" ng-attr-id="{{field.field_name}}"
+                       ng-attr-value="{{field.value || ''}}" ng-model="selectedWidget.fieldModels[field.field_name]" ng-model-options="{debounce: 300}" ng-change="enforceValidations(field,selectedWidget.fieldModels)">
+                
+                <select class="show-hide form-control" ng-attr-id="{{field.name}}" ng-show="field.retLookupOptions && field.type == 'lookup'" ng-model="selectedWidget.fieldModels[field.field_name]">
+                  <option ng-repeat="option in field.retLookupOptions" ng-attr-value="{{option.value}}" ng-selected="field.value == option.value">{{option.display}}</option>
+                </select>
+                <select class="show-hide form-control" ng-attr-id="{{field.field_name}}" ng-show="field.imgs.length > 0 && field.type == 'imgPicker'" ng-model="selectedWidget.fieldModels[field.field_name]" ng-options="img.value as img.displayValue for img in field.imgs track by img.value" ng-change="popImage(selectedImg)">
+                  <option style="display:none" value=""></option>
+                </select>
+              </td>
+              <td width="70%" ng-show="field.trying" style="text-align: left;">
+                <span style="font-size: 2em" class="glyphicon glyphicon-refresh spinning"></span>
+              </td>
+            </tr>
+            <tr ng-show="showThisImg" class="show-hide">
+              <td colspan="2">
+                <img ng-src="{{showThisImg}}" style="width: 100% !important; height: 20vw !important; border-radius: 6px;" />
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="panel-footer">
+    <div class="text-right">
+      <button class="btn btn-success" ng-click="saveSelectedWidget()">${Save}</button>
+      <button class="btn btn-danger" ng-click="closeWidgetCTRLModal()">${Cancel}</button>
+    </div>
+  </div>
+</div>
+
+<style>
+  .glyphicon-refresh {
+    animation: spin .4s infinite linear;
+    -webkit-animation: spin2 .4s infinite linear;
+  }
+
+  @-webkit-keyframes spin2 {
+    from { -webkit-transform: rotate(0deg); }
+    to { -webkit-transform: rotate(360deg); }
+  }
+
+  .labelCell {
+    text-align: right;
+    vertical-align: middle !important;
+    white-space: pre-line;
+  }
+
+  .inputCell {
+    text-align: left;
+  }
+</style>]]></template>
+    </sp_ng_template>
+</record_update>

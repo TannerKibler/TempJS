@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<database>
+    <element label="User Widget" max_length="40" name="x_60289_service_po_user_widget" type="collection">
+        <element label="Column 1" max_length="500" name="column_1" type="string"/>
+        <element label="Column 2" max_length="500" name="column_2" type="string"/>
+        <element label="Column 3" max_length="500" name="column_3" type="string"/>
+        <element label="Column 4" max_length="500" name="column_4" type="string"/>
+        <element label="Column 5" max_length="500" name="column_5" type="string"/>
+        <element label="Column 6" max_length="500" name="column_6" type="string"/>
+        <element label="Default" max_length="40" name="default_row" type="boolean"/>
+        <element label="Order" max_length="10" name="order" type="integer"/>
+        <element label="Page" mandatory="true" max_length="32" name="page" reference="sp_page" type="reference"/>
+        <element label="User" max_length="32" name="user" reference="sys_user" type="reference"/>
+        <index name="index">
+            <element name="page"/>
+        </index>
+        <index name="index2">
+            <element name="user"/>
+        </index>
+    </element>
+</database>

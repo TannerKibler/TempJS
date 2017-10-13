@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="x_60289_service_po_customer_facing_widget">
+    <x_60289_service_po_customer_facing_widget action="INSERT_OR_UPDATE">
+        <active>true</active>
+        <category>lists</category>
+        <default_options/>
+        <description><![CDATA[<p><strong>This is an example!</strong></p>
+<ul style="list-style-position: inside;"><li>This could be used for any number of things...<br />
+<ul><li>Links, images, tables, whatever.</li></ul>
+</li></ul>]]></description>
+        <display_name>List with Filter</display_name>
+        <minimum_container_size>2</minimum_container_size>
+        <required_roles name="itil">282bf1fac6112285017366cb5f867469</required_roles>
+        <sys_class_name>x_60289_service_po_customer_facing_widget</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2017-10-06 18:19:09</sys_created_on>
+        <sys_id>1a528cd3dba90300e9cbfbefbf9619af</sys_id>
+        <sys_mod_count>7</sys_mod_count>
+        <sys_name>List with Filter</sys_name>
+        <sys_package display_value="Service Portal Customizer" source="x_60289_service_po">848abecfdbe50300e9cbfbefbf961941</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Service Portal Customizer">848abecfdbe50300e9cbfbefbf961941</sys_scope>
+        <sys_update_name>x_60289_service_po_customer_facing_widget_1a528cd3dba90300e9cbfbefbf9619af</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-10-10 18:51:19</sys_updated_on>
+        <user_options>{&#13;
+    "options": [&#13;
+        {"field_name": "table", "display_name": "Table Name", "hint":"Please select a table to pull your list from.", "type":"lookup", "lookup_data":{"table_name":"sys_db_object","filter":"nameINincident,problem,sc_request","display_field":"label","value_field":"name"}},&#13;
+{"field_name":"panel_body_height","display_name":"Default Height", "hint":"How much vertical screen space should I take up?", "type":"number", "append":"vh", "validation": {"min": "15", "max": "50"}}&#13;
+    ]&#13;
+}</user_options>
+        <widget display_value="Simple List W/Filter">d54e9fe8db904300e9cbfbefbf961980</widget>
+    </x_60289_service_po_customer_facing_widget>
+</record_update>

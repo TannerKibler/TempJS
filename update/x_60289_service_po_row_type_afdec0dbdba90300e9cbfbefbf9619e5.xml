@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="x_60289_service_po_row_type">
+    <x_60289_service_po_row_type action="INSERT_OR_UPDATE">
+        <display_name>One Wide Column</display_name>
+        <order>0</order>
+        <sys_class_name>x_60289_service_po_row_type</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2017-10-06 19:14:25</sys_created_on>
+        <sys_id>afdec0dbdba90300e9cbfbefbf9619e5</sys_id>
+        <sys_mod_count>11</sys_mod_count>
+        <sys_name>One Wide Column</sys_name>
+        <sys_package display_value="Service Portal Customizer" source="x_60289_service_po">848abecfdbe50300e9cbfbefbf961941</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Service Portal Customizer">848abecfdbe50300e9cbfbefbf961941</sys_scope>
+        <sys_update_name>x_60289_service_po_row_type_afdec0dbdba90300e9cbfbefbf9619e5</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-10-07 19:36:53</sys_updated_on>
+        <table_cell_spans>{&#13;
+"spans":[&#13;
+    {"lbl": "12"}&#13;
+  ]&#13;
+}</table_cell_spans>
+    </x_60289_service_po_row_type>
+</record_update>

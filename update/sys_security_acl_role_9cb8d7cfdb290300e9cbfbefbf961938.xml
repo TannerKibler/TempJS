@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_security_acl_role">
+    <sys_security_acl_role action="INSERT_OR_UPDATE">
+        <sys_class_name>sys_security_acl_role</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2017-10-06 15:16:33</sys_created_on>
+        <sys_id>9cb8d7cfdb290300e9cbfbefbf961938</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>x_60289_service_po_customer_facing_widget.x_60289_service_po.customer_facing_widget_user</sys_name>
+        <sys_package display_value="Service Portal Customizer" source="x_60289_service_po">848abecfdbe50300e9cbfbefbf961941</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Service Portal Customizer">848abecfdbe50300e9cbfbefbf961941</sys_scope>
+        <sys_security_acl display_value="x_60289_service_po_customer_facing_widget">94b8d7cfdb290300e9cbfbefbf961936</sys_security_acl>
+        <sys_update_name>sys_security_acl_role_9cb8d7cfdb290300e9cbfbefbf961938</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-10-06 15:16:33</sys_updated_on>
+        <sys_user_role display_value="x_60289_service_po.customer_facing_widget_user" name="x_60289_service_po.customer_facing_widget_user">54b81b8fdb290300e9cbfbefbf9619d1</sys_user_role>
+        <transaction_id/>
+    </sys_security_acl_role>
+</record_update>
