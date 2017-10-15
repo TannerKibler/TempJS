@@ -53,6 +53,14 @@ function($rootElement, $scope, $compile, $window, $location, spUtil, $rootScope,
 		size: 'lg'
 		//backdrop: 'static'
 	};
+	
+	var modalColumnCTRL = {
+		animation: true,
+		templateUrl: "colCTRLModal",
+		scope: $scope,
+		size: 'lg'
+		//backdrop: 'static'
+	};
 
 	$scope.closeWidgetCTRLModal = function() {
 		$scope.widgetCTRLModal.close();
@@ -60,7 +68,6 @@ function($rootElement, $scope, $compile, $window, $location, spUtil, $rootScope,
 	};
 
 	$scope.popWidgetCTRLModal = function(colOb) {
-		console.log(colOb);
 		$scope.siblingWidgets = colOb.widgets;
 		$scope.widgetCTRLModal = $uibModal.open(modalWidgetCTRL);
 
@@ -69,6 +76,23 @@ function($rootElement, $scope, $compile, $window, $location, spUtil, $rootScope,
 		}, function(){
 			//$scope.selectedNewRow = {};
 			$scope.selectedWidget = {};
+		});
+	}
+	
+	$scope.closeColumnCTRLModal = function() {
+		$scope.colCTRLModal.close();
+		$scope.selectedColumn = {};
+	};
+
+	$scope.popColumnCTRLModal = function(colOb) {
+		$scope.selectedColumn = colOb;
+		$scope.colCTRLModal = $uibModal.open(modalColumnCTRL);
+
+		$scope.colCTRLModal.result.then(function(){
+			//Get triggers when modal is closed
+		}, function(){
+			//$scope.selectedNewRow = {};
+			$scope.selectedColumn = {};
 		});
 	}
 
@@ -116,6 +140,7 @@ function($rootElement, $scope, $compile, $window, $location, spUtil, $rootScope,
 			tmpRowOb.cols = tmpUserRowCols;
 			$scope.rows.unshift(tmpRowOb);
 			$scope.closeModalNewRow();
+			$scope.pageModified = true;
 			if (is_mobile){
 				spUtil.addInfoMessage('Successfully added a new row! Your screen size will cause your row to appear stacked.');
 				spUtil.addInfoMessage('On larger screens, your columns will take effect.');
@@ -163,6 +188,10 @@ function($rootElement, $scope, $compile, $window, $location, spUtil, $rootScope,
 
 		return retArr;
 	}
+	
+	$scope.prepMe = function(widgOb) {
+		$scope.modifiedWidget = {};
+	}
 
 	$scope.loadThisWidget = function(widgOb) {
 		$scope.selectedWidget = {};
@@ -205,8 +234,6 @@ function($rootElement, $scope, $compile, $window, $location, spUtil, $rootScope,
 	}	
 
 	$scope.saveSelectedWidget = function() {
-		console.log($scope.selectedWidget);
-		console.log($scope.siblingWidgets);
 		var options = {};
 		for (var x in $scope.selectedWidget.user_options.value.options) {
 			var tmp = $scope.selectedWidget.user_options.value.options[x];
@@ -222,6 +249,7 @@ function($rootElement, $scope, $compile, $window, $location, spUtil, $rootScope,
 		c.server.get({type: 'newWidget', id: $scope.selectedWidget.id, options: options}).then(function(response) {
 			$scope.siblingWidgets.push(response.data.retNewWidget);
 			$scope.pageModified = true;
+			$scope.closeWidgetCTRLModal();
 		});
 	}
 
@@ -323,19 +351,20 @@ function($rootElement, $scope, $compile, $window, $location, spUtil, $rootScope,
 		tmp.rowOb = row;
 		tmp.canAddWidgets = (col.widgets.length <= MAX_WIDGETS);
 		tmp.hasWidgets = col.widgets.length > 0;
+		tmp.col = col;
 	}
 
-	$scope.moveMeUp = function (index) {
+	$scope.moveMeUp = function (arr, index) {
 		$scope.pageModified = true;
-		var tmp = $scope.rows[index];
-		$scope.rows[index] = $scope.rows[index-1];
-		$scope.rows[index-1] = tmp;
+		var tmp = arr[index];
+		arr[index] = arr[index-1];
+		arr[index-1] = tmp;
 	}
-	$scope.moveMeDown = function (index) {
+	$scope.moveMeDown = function (arr, index) {
 		$scope.pageModified = true;
-		var tmp = $scope.rows[index];
-		$scope.rows[index] = $scope.rows[index+1];
-		$scope.rows[index+1] = tmp;
+		var tmp = arr[index];
+		arr[index] = arr[index+1];
+		arr[index+1] = tmp;
 	}
 	$scope.moveMeLeft = function(index, row) {
 		$scope.pageModified = true;
@@ -348,6 +377,13 @@ function($rootElement, $scope, $compile, $window, $location, spUtil, $rootScope,
 		var tmp = row.cols[index];
 		row.cols[index] = row.cols[index+1];
 		row.cols[index+1] = tmp;
+	}
+	
+	$scope.deleteMe = function(arr, index) {
+		//debugger;
+		arr.splice(index, 1);
+		
+		console.log($scope.rows);
 	}
 
 	$scope.undo = function(e) {
@@ -381,8 +417,20 @@ function($rootElement, $scope, $compile, $window, $location, spUtil, $rootScope,
 			$(sib).toggleClass('btn-success');
 		});
 	}
+	
+	$scope.getDisplayNameFromID = function(id) {
+		for (var x in $scope.availWidgets) {
+			if (id == $scope.availWidgets[x].id) {
+				return $scope.availWidgets[x].display_name.value;
+			}
+		}
+	}
 
 	$scope.setRows(c.data.userRows);
+	
+	console.log(c.data.userRows);
+	
+	console.log($scope.availWidgets)
 
 	/*$scope.$watch('mdlCategory', function() {
 		$scope.selectedWidget = {};
@@ -802,6 +850,10 @@ $bottomZ: 50;
 $pageZ: 0;
 $borderRad: 6px;
 
+.clickable {
+cursor: pointer;
+}
+
 .bordered {
   border: 2px solid $blueColor;
   border-radius: $borderRad;
@@ -868,6 +920,14 @@ $borderRad: 6px;
 
 .successBackground {
   background-color: #71c171;
+}
+
+.fa-stack .fa-circle {
+ 	color: #71c171;
+}
+
+.successBorder {
+  border: 2px solid #71c171;
 }
 
 .inline {
@@ -954,6 +1014,10 @@ $borderRad: 6px;
 
 .blueBackground {
   background-color: blue;
+}
+
+.controlPopup .btn-lg {
+  margin-top: 3px; 
 }
 /*
 
@@ -1797,14 +1861,14 @@ function isEmpty(ob) {
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2017-10-06 15:22:58</sys_created_on>
         <sys_id>2e2adfcfdb290300e9cbfbefbf9619e9</sys_id>
-        <sys_mod_count>258</sys_mod_count>
+        <sys_mod_count>290</sys_mod_count>
         <sys_name>Page Builder</sys_name>
         <sys_package display_value="Service Portal Customizer" source="x_60289_service_po">848abecfdbe50300e9cbfbefbf961941</sys_package>
         <sys_policy/>
         <sys_scope display_value="Service Portal Customizer">848abecfdbe50300e9cbfbefbf961941</sys_scope>
         <sys_update_name>sp_widget_2e2adfcfdb290300e9cbfbefbf9619e9</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2017-10-13 21:44:28</sys_updated_on>
+        <sys_updated_on>2017-10-15 19:17:58</sys_updated_on>
         <template><![CDATA[<div id="top">
   <div ng-if="data.isPageBuilder">
     <button class="btn btn-primary btn-lg edit" ng-click="toggleEdit($event)">{{editLabel}}</button>
@@ -1819,32 +1883,37 @@ function isEmpty(ob) {
   </div>
   <div id="builder">
     <div class="row repeated-item" ng-class="{'padding20 margin20 borderBottom borderTop minHeight100': tgEdit}" ng-repeat="(rowIndex, row) in rows">
-      <div class="centCont repeated-item {{col.bootClass}}" ng-class="{'borderAll minHeight300 successBackground roundedBorder': tgEdit, 'margin20': is_mobile && tgEdit}" ng-repeat="col in row.cols" ng-if="col.bootClass">
+      <div class="centCont repeated-item {{col.bootClass}}" ng-class="{'borderAll minHeight300 successBorder roundedBorder': tgEdit, 'margin20': is_mobile && tgEdit}" ng-repeat="col in row.cols" ng-if="col.bootClass">
         <sp-widget class="show-hide" ng-show="rows[rowIndex].cols[$index].widgets.length > 0" ng-repeat="widg in rows[rowIndex].cols[$index].widgets" widget="widg"></sp-widget>
         <!--<button class="btn btn-lg btn-primary centerMe" ng-click="popWidgetCTRLModal(rows[rowIndex].cols[$index])" ng-show="tgEdit"><i class="fa fa-plus-circle text-active"></i></button>-->
-        <button ng-if="tgEdit" class="popBtn" uib-popover-template="rowWidgetPopoverOb.templateUrl" popover-placement="{{calculateMyPopoverPlacement(col, $index, rowIndex)}}"popover-animation="true"
-                popover-trigger="focus" popover-popup-close-delay="50" ng-click="loadPopupData(row, rowIndex, col, $index)"></button>
+        <button ng-if="tgEdit" class="popBtn clickable" uib-popover-template="rowWidgetPopoverOb.templateUrl" popover-placement="{{calculateMyPopoverPlacement(col, $index, rowIndex)}}"
+                popover-trigger="focus" popover-popup-close-delay="50" ng-click="loadPopupData(row, rowIndex, col, $index)">
+          <span class="fa-stack fa-5x">
+            <i class="fa fa-circle fa-stack-2x"></i>
+            <i class="fa fa-cogs fa-stack-1x fa-inverse"></i>
+          </span>
+        </button>
       </div>
     </div>
   </div>
 </div>
 <script type="text/ng-template" id="rowWidgetPopover.html">
-  <div class="clearfix row" style="width: 200px; text-align: center;" >
+  <div class="clearfix row controlPopup" style="width: 200px; text-align: center;" >
   	<h3><span><b>${Row Controls}</b></span></h3>
       <div class="icon-bar" style="text-align: center;"> 
-        <a href ng-click="moveMeUp(popupOb.rowIndex)" ng-class="{'disabledLink': !popupOb.canMoveUp}"><i class="fa fa-arrow-up"></i></a>
-        <a href="#" ng-click="moveMeDown(popupOb.rowIndex)" ng-class="{'disabledLink': !popupOb.canMoveDown}"><i class="fa fa-arrow-down"></i></a> 
-        <a href="#"><i class="fa fa-remove"></i></a>
-  		</div>
+        <a href ng-click="moveMeUp(rows,popupOb.rowIndex)" ng-class="{'disabledLink': !popupOb.canMoveUp}"><i class="fa fa-arrow-up"></i></a>
+        <a href="#" ng-click="moveMeDown(rows,popupOb.rowIndex)" ng-class="{'disabledLink': !popupOb.canMoveDown}"><i class="fa fa-arrow-down"></i></a> 
+        <a href="#" ng-click="deleteMe(rows, popupOb.rowIndex)"><i class="fa fa-remove"></i></a>
+  </div>
       <hr/>
       <h3><span><b>${Column Controls}</b></span></h3>
       <div class="icon-bar"> 
         <a href="#" ng-click="moveMeLeft(popupOb.colIndex, popupOb.rowOb)" ng-class="{'disabledLink': !popupOb.canMoveLeft}"><i class="fa fa-arrow-left"></i></a>
         <a href="#" ng-click="moveMeRight(popupOb.colIndex, popupOb.rowOb)" ng-class="{'disabledLink': !popupOb.canMoveRight}"><i class="fa fa-arrow-right"></i></a> 
         <a href="#"><i class="fa fa-remove"></i></a>
-  		</div>
-      <button style="width: 95%;" ng-if="popupOb.canAddWidgets" class="btn btn-lg btn-primary">Add Widget</button>
-      <button style="width: 95%;" ng-if="popupOb.hasWidgets" class="btn btn-lg btn-info">Manage Widgets</button>
+  </div>
+      <button style="width: 95%;" ng-click="popWidgetCTRLModal(col)" ng-if="popupOb.canAddWidgets" class="btn btn-lg btn-primary">Add Widget</button>
+      <button style="width: 95%;" ng-click="popColumnCTRLModal(col)" ng-if="popupOb.hasWidgets" class="btn btn-lg btn-info">Manage Widgets</button>
   </div>
 </script>]]></template>
     </sp_widget>
