@@ -35,7 +35,7 @@ function($rootElement, $scope, $compile, $window, $location, spUtil, $rootScope,
 		if (isTablet.matches)
 			is_tablet = true;
 	});
-	
+
 	$scope.is_mobile = is_mobile;
 
 	var modalRowAdd = {
@@ -53,7 +53,7 @@ function($rootElement, $scope, $compile, $window, $location, spUtil, $rootScope,
 		size: 'lg'
 		//backdrop: 'static'
 	};
-	
+
 	var modalColumnCTRL = {
 		animation: true,
 		templateUrl: "colCTRLModal",
@@ -78,7 +78,7 @@ function($rootElement, $scope, $compile, $window, $location, spUtil, $rootScope,
 			$scope.selectedWidget = {};
 		});
 	}
-	
+
 	$scope.closeColumnCTRLModal = function() {
 		$scope.colCTRLModal.close();
 		$scope.selectedColumn = {};
@@ -159,7 +159,7 @@ function($rootElement, $scope, $compile, $window, $location, spUtil, $rootScope,
 						(widg.minSize == null || widg.minSize <= $scope.colSize));
 	}
 
-	function parseMyOptions(optArr) {
+	function parseMyOptions(optArr, widg) {
 		if (!optArr)
 			return [];
 
@@ -171,14 +171,26 @@ function($rootElement, $scope, $compile, $window, $location, spUtil, $rootScope,
 
 			if (tmp.type == 'lookup' || tmp.type == 'imgPicker') {
 				tmp.trying = true;
-				var lookupOb = {}, fdName = tmp.field_name;
+				var lookupOb = {}, fdName = tmp.field_name, fdIndex = x;
+				function checkDOMChange() {
+					var canvas = document.getElementById(fdName+'_canvas');
+					if (canvas) {
+						var ctx = canvas.getContext("2d");
+						startSpinner(ctx, 50, 50, fdIndex, fdName, widg);
+						return;
+					}
+					setTimeout( checkDOMChange, 100 );
+				}
+				checkDOMChange();
+
+
 				lookupOb = tmp.lookup_data;
 				c.server.get({type: 'option_lookup', lookup_ob: lookupOb}).then(function(response) {
 					//tmp.retLookupOptions = response.data.retLookupOptions;
-					for (var x in $scope.selectedWidget.parsed_options) {
-						if ($scope.selectedWidget.parsed_options[x].field_name == fdName) {
-							$scope.selectedWidget.parsed_options[x].retLookupOptions = response.data.retLookupOptions;
-							$scope.selectedWidget.parsed_options[x].trying = false;
+					for (var x in widg.parsed_options) {
+						if (widg.parsed_options[x].field_name == fdName) {
+							widg.parsed_options[x].retLookupOptions = response.data.retLookupOptions;
+							widg.parsed_options[x].trying = false;
 						}
 					}
 				});
@@ -188,16 +200,89 @@ function($rootElement, $scope, $compile, $window, $location, spUtil, $rootScope,
 
 		return retArr;
 	}
-	
-	$scope.prepMe = function(widgOb) {
-		$scope.modifiedWidget = {};
+
+	function updateFieldModel(widg, opts, valWidg) {
+		var currOpts = valWidg.options;
+
+		for (var x in currOpts) {
+			if (currOpts.hasOwnProperty(x)) {
+				for (var i = 0; i < opts.length; i++) {
+					if (opts[i].field_name == x)	 {
+						if (opts[i].type == 'number')
+							if (opts[i].append)
+								widg.fieldModels[x] = parseInt(currOpts[x].toString().replace(opts[i].append, ''), 10);
+							else
+								widg.fieldModels[x] = parseInt(currOpts[x].toString(), 10);
+						else
+							widg.fieldModels[x] = currOpts[x];
+					}
+				}
+			}
+		}
+	}
+
+	function copyOb(mdl, ob) {
+		for (var x in mdl) {
+			ob[x] = mdl[x]
+		}
+	}
+
+	$scope.updateWidget = function(widgs) {
+		var options = {};
+		for (var x in $scope.modifiedWidget.user_options.value.options) {
+			var tmp = $scope.modifiedWidget.user_options.value.options[x];
+
+			if (tmp.append) {
+				options[tmp.field_name] = $scope.modifiedWidget.fieldModels[tmp.field_name] + tmp.append;
+			}
+			else{
+				options[tmp.field_name] = $scope.modifiedWidget.fieldModels[tmp.field_name];
+			}
+		}
+
+		c.server.get({type: 'newWidget', id: $scope.modifiedWidget.id, options: options}).then(function(response) {
+			if ($scope.currInd) {
+				$scope.deleteMe(widgs, $scope.currInd);
+				widgs[$scope.currInd] = response.data.retNewWidget;
+			}
+			else
+				$scope.siblingWidgets.push(response.data.retNewWidget);
+			$scope.pageModified = true;
+			$scope.closeColumnCTRLModal();
+		});
+	}
+
+	$scope.prepMe = function(widgOb, ind) {
+		var tmpWidg = {};
+		$scope.currInd = ind;
+		//Get user widgets that are based on this widget
+		var thisWidgType = $scope.availWidgets.filter(function(thisWidgType) {
+			return thisWidgType.widget.value == widgOb.sys_id.toString();
+		});
+
+		if (!thisWidgType)
+			return null;
+
+		tmpWidg = thisWidgType[0];
+
+		var x = parseMyOptions(tmpWidg.user_options.value.options, tmpWidg);
+
+		tmpWidg.fieldModels = {};
+		copyOb(x, tmpWidg.fieldModels);
+
+		//Get the selected user widget (to pull current options)
+		var thisUserWidg = $scope.selectedColumn.widgets[ind];
+
+		updateFieldModel(tmpWidg, x, thisUserWidg);
+		tmpWidg.parsed_options = x;
+		$scope.modifiedWidget = tmpWidg;
 	}
 
 	$scope.loadThisWidget = function(widgOb) {
 		$scope.selectedWidget = {};
 		$scope.selectedWidget = widgOb;
 		$scope.selectedWidget.fieldModels = {};
-		widgOb.parsed_options = parseMyOptions(widgOb.user_options.value.options);
+		widgOb.parsed_options = parseMyOptions(widgOb.user_options.value.options, widgOb);
 	}
 
 	$scope.setRows = function(dataRows) {
@@ -342,7 +427,7 @@ function($rootElement, $scope, $compile, $window, $location, spUtil, $rootScope,
 		var tmp;
 		$scope.popupOb = tmp = {};
 		tmp.canMoveLeft = (colIndex > 0);
-		tmp.canMoveRight = (row.cols[colIndex+1].bootClass != '');
+		tmp.canMoveRight = (!row.cols[colIndex+1] || row.cols[colIndex+1].bootClass != '');
 		tmp.canMoveUp = (rowIndex > 0);
 		tmp.canMoveDown = (typeof $scope.rows[rowIndex+1] != 'undefined')
 		tmp.widgets = col.widgets;
@@ -352,6 +437,7 @@ function($rootElement, $scope, $compile, $window, $location, spUtil, $rootScope,
 		tmp.canAddWidgets = (col.widgets.length <= MAX_WIDGETS);
 		tmp.hasWidgets = col.widgets.length > 0;
 		tmp.col = col;
+		$scope.posOb = [rowIndex, colIndex];
 	}
 
 	$scope.moveMeUp = function (arr, index) {
@@ -378,19 +464,39 @@ function($rootElement, $scope, $compile, $window, $location, spUtil, $rootScope,
 		row.cols[index] = row.cols[index+1];
 		row.cols[index+1] = tmp;
 	}
-	
+
 	$scope.deleteMe = function(arr, index) {
-		//debugger;
-		arr.splice(index, 1);
-		
-		console.log($scope.rows);
+		var tmp = arr[index];
+		if (tmp.sys_class_name == 'sp_widget') {
+			trimWidgetFromDOM('v' + tmp.sys_id, index);
+			arr.splice(index, 1);
+		}
+		else
+			arr.splice(index, 1);
+	}
+
+	function trimWidgetFromDOM(id, index) {
+		debugger;
+		if ($scope.posOb && $scope.posOb.length == 2) {
+			var strName = '[name="XYZ"]'.replace('XYZ', $scope.posOb.join('-'));
+			//var jQ = $('.ng-scope .' + id);
+			var i = 0;
+			$(strName).children('div.ng-scope').each(function () {
+				if (index == i) {
+					var tmp = $(this);
+					if ($(this).hasClass(id))
+						$(this).remove();
+				}
+				i++;
+			});
+		}
 	}
 
 	$scope.undo = function(e) {
 		c.server.get({type: 'refresh'}).then(function(response) {
 			$scope.setRows(response.data.userRows);
 			c.data.defaultSetup = response.data.defaultSetup;
-			
+
 			$scope.tgEdit = !$scope.tgEdit;
 			$scope.pageModified = false;
 			var sib = $(e.target).prev();
@@ -408,7 +514,7 @@ function($rootElement, $scope, $compile, $window, $location, spUtil, $rootScope,
 		c.server.get({type: 'restore'}).then(function(response) {
 			$scope.setRows(response.data.userRows);
 			c.data.defaultSetup = response.data.defaultSetup;
-			
+
 			$scope.tgEdit = !$scope.tgEdit;
 			$scope.pageModified = false;			
 			var sib = $(e.target).prev().prev();
@@ -417,7 +523,7 @@ function($rootElement, $scope, $compile, $window, $location, spUtil, $rootScope,
 			$(sib).toggleClass('btn-success');
 		});
 	}
-	
+
 	$scope.getDisplayNameFromID = function(id) {
 		for (var x in $scope.availWidgets) {
 			if (id == $scope.availWidgets[x].id) {
@@ -427,10 +533,39 @@ function($rootElement, $scope, $compile, $window, $location, spUtil, $rootScope,
 	}
 
 	$scope.setRows(c.data.userRows);
-	
+
 	console.log(c.data.userRows);
-	
+
 	console.log($scope.availWidgets)
+
+	function startSpinner(ctx, width, height,ind,fld, widg) {
+		var startAngle = (2*Math.PI);
+		var endAngle = (Math.PI*1.5);
+		var currentAngle = 0;
+		var oldTime = getTime();
+		function getTime() {
+			return window.performance.now();
+		}
+		function Update(){
+			if (!widg || !widg.parsed_options || 
+					!widg.parsed_options[ind] || 
+					!widg.parsed_options[ind].trying)
+				return null;
+			var newTime = getTime(),
+					diff = newTime - oldTime;
+			oldTime = newTime;
+			ctx.clearRect(0,0,width,height);
+			ctx.beginPath();
+			ctx.arc(width/2, height/2, 15, startAngle + currentAngle, endAngle + currentAngle, false);
+			ctx.strokeStyle = "#FAC832";
+			ctx.lineWidth = 10.0;
+			ctx.stroke();
+			currentAngle += diff * 0.02;
+			currentAngle %= 2 * Math.PI;
+			requestAnimationFrame(Update);
+		}
+		requestAnimationFrame(Update);
+	}
 
 	/*$scope.$watch('mdlCategory', function() {
 		$scope.selectedWidget = {};
@@ -955,6 +1090,17 @@ cursor: pointer;
   //border: 1px solid black;
 }
 
+.btnNewRow {
+ 	//width: 10vw;
+  //height: 10vw;
+  margin: auto;
+  margin-bottom: 5px;
+}
+
+.fa-fr {
+ font-size: 8vmax; 
+}
+
 .popBtn {
   z-index: 50;
   width: 100%;
@@ -970,6 +1116,17 @@ cursor: pointer;
   //cursor:pointer;
   overflow: hidden;
   outline:none;
+  
+  
+ /* span {
+   	display: block;
+    margin: auto;
+    margin-top: 25%;
+  }*/
+}
+
+.fa-stack {
+  //vertical-align: middle;
 }
 
 .popover {
@@ -1000,7 +1157,7 @@ cursor: pointer;
 }
 
 .disabledLink {
-  opacity: 0.5;
+  //opacity: 0.5;
     cursor: not-allowed;
   i {
     opacity: 0.5;
@@ -1861,33 +2018,33 @@ function isEmpty(ob) {
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2017-10-06 15:22:58</sys_created_on>
         <sys_id>2e2adfcfdb290300e9cbfbefbf9619e9</sys_id>
-        <sys_mod_count>290</sys_mod_count>
+        <sys_mod_count>360</sys_mod_count>
         <sys_name>Page Builder</sys_name>
         <sys_package display_value="Service Portal Customizer" source="x_60289_service_po">848abecfdbe50300e9cbfbefbf961941</sys_package>
         <sys_policy/>
         <sys_scope display_value="Service Portal Customizer">848abecfdbe50300e9cbfbefbf961941</sys_scope>
         <sys_update_name>sp_widget_2e2adfcfdb290300e9cbfbefbf9619e9</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2017-10-15 19:17:58</sys_updated_on>
+        <sys_updated_on>2017-11-01 21:39:16</sys_updated_on>
         <template><![CDATA[<div id="top">
   <div ng-if="data.isPageBuilder">
     <button class="btn btn-primary btn-lg edit" ng-click="toggleEdit($event)">{{editLabel}}</button>
     <button class="btn btn-warning btn-lg show-hide" ng-show="tgEdit && pageModified" ng-click="undo($event)">${Revert}</button>
     <button class="btn btn-danger btn-lg show-hide" ng-show="tgEdit && !data.defaultSetup" ng-click="restore($event)">${Restore Default}</button>
   </div>
-  <div ng-show="tgEdit && rows.length < maxRows" class="borderBottom">
+  <div ng-show="tgEdit && rows.length < maxRows" style="text-align: center">
     <div>
-      <h4 class="text-active">${Click below to select the grid style for this row}</h4>
+      <h3 class="display-3 text-active">${Click below to select the grid style for this row}</h3>
     </div>
-    <button class="btn btn-lg btn-primary" ng-click="popModalNewRow()"><i class="fa fa-plus-circle text-active"></i></button>
+    <button class="btn btn-lg btn-primary btnNewRow centerMe" ng-click="popModalNewRow()"><i class="fa fa-plus-circle fa-fr text-active"></i></button>
   </div>
   <div id="builder">
     <div class="row repeated-item" ng-class="{'padding20 margin20 borderBottom borderTop minHeight100': tgEdit}" ng-repeat="(rowIndex, row) in rows">
-      <div class="centCont repeated-item {{col.bootClass}}" ng-class="{'borderAll minHeight300 successBorder roundedBorder': tgEdit, 'margin20': is_mobile && tgEdit}" ng-repeat="col in row.cols" ng-if="col.bootClass">
+      <div name="{{rowIndex}}-{{$index}}" class="centCont repeated-item {{col.bootClass}}" ng-class="{'borderAll minHeight300 successBorder roundedBorder': tgEdit, 'margin20': is_mobile && tgEdit}" ng-repeat="col in row.cols" ng-if="col.bootClass">
         <sp-widget class="show-hide" ng-show="rows[rowIndex].cols[$index].widgets.length > 0" ng-repeat="widg in rows[rowIndex].cols[$index].widgets" widget="widg"></sp-widget>
         <!--<button class="btn btn-lg btn-primary centerMe" ng-click="popWidgetCTRLModal(rows[rowIndex].cols[$index])" ng-show="tgEdit"><i class="fa fa-plus-circle text-active"></i></button>-->
         <button ng-if="tgEdit" class="popBtn clickable" uib-popover-template="rowWidgetPopoverOb.templateUrl" popover-placement="{{calculateMyPopoverPlacement(col, $index, rowIndex)}}"
-                popover-trigger="focus" popover-popup-close-delay="50" ng-click="loadPopupData(row, rowIndex, col, $index)">
+                popover-trigger="click outsideClick" popover-popup-close-delay="50" ng-click="loadPopupData(row, rowIndex, col, $index)">
           <span class="fa-stack fa-5x">
             <i class="fa fa-circle fa-stack-2x"></i>
             <i class="fa fa-cogs fa-stack-1x fa-inverse"></i>
