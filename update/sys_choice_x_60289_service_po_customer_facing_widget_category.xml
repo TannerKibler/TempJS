@@ -20,13 +20,51 @@
             <sys_updated_on>2017-10-06 18:20:06</sys_updated_on>
             <value>lists</value>
         </sys_choice>
+        <sys_choice action="INSERT_OR_UPDATE">
+            <dependent_value/>
+            <element>category</element>
+            <hint/>
+            <inactive>false</inactive>
+            <label>Alerts</label>
+            <language>en</language>
+            <name>x_60289_service_po_customer_facing_widget</name>
+            <sequence>1</sequence>
+            <sys_created_by>admin</sys_created_by>
+            <sys_created_on>2018-08-21 05:17:17</sys_created_on>
+            <sys_domain>global</sys_domain>
+            <sys_domain_path>/</sys_domain_path>
+            <sys_id>b9a284b137c42300e3168cf6c3990ef1</sys_id>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_updated_by>admin</sys_updated_by>
+            <sys_updated_on>2018-08-21 05:17:17</sys_updated_on>
+            <value>alerts</value>
+        </sys_choice>
+        <sys_choice action="INSERT_OR_UPDATE">
+            <dependent_value/>
+            <element>category</element>
+            <hint/>
+            <inactive>false</inactive>
+            <label>Miscellaneous</label>
+            <language>en</language>
+            <name>x_60289_service_po_customer_facing_widget</name>
+            <sequence>1</sequence>
+            <sys_created_by>admin</sys_created_by>
+            <sys_created_on>2018-08-21 05:01:28</sys_created_on>
+            <sys_domain>global</sys_domain>
+            <sys_domain_path>/</sys_domain_path>
+            <sys_id>6efefbed37842300e3168cf6c3990e32</sys_id>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_updated_by>admin</sys_updated_by>
+            <sys_updated_on>2018-08-21 05:01:28</sys_updated_on>
+            <value>misc</value>
+        </sys_choice>
         <sys_choice_set action="INSERT_OR_UPDATE">
             <element>category</element>
             <name>x_60289_service_po_customer_facing_widget</name>
             <sys_class_name>sys_choice_set</sys_class_name>
             <sys_created_by>admin</sys_created_by>
             <sys_created_on>2017-10-06 18:17:35</sys_created_on>
-            <sys_id>9822c0d3dba90300e9cbfbefbf9619a4</sys_id>
+            <sys_id>f74d46eb37331300e3168cf6c3990e53</sys_id>
             <sys_mod_count>0</sys_mod_count>
             <sys_name>category</sys_name>
             <sys_package display_value="Service Portal Customizer" source="x_60289_service_po">848abecfdbe50300e9cbfbefbf961941</sys_package>

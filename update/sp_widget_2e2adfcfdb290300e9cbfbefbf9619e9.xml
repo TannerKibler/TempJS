@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <record_update table="sp_widget">
     <sp_widget action="INSERT_OR_UPDATE">
-        <client_script><![CDATA[
-function($rootElement, $scope, $compile, $window, $location, spUtil, $rootScope, $uibModal, $sce) {
+        <category/>
+        <client_script><![CDATA[function($rootElement, $scope, $compile, $window, $location, spUtil, $rootScope, $uibModal, $sce) {
 	/* widget controller */
 	var c = this;
 	var XS_CONST = 'col-xs-12 ';
@@ -16,14 +16,23 @@ function($rootElement, $scope, $compile, $window, $location, spUtil, $rootScope,
 	$scope.editLabel = 'Edit Page Layout';
 	$scope.selectedWidget = {};
 	$scope.selectedNewRow = '';
-	$scope.shownImg = {};
+	$scope.shownImg = false;
+	$scope.picture = '';
+	$scope.mdlCategory = {};
 	$scope.maxRows = 3;
-
-	if (c.data.isPageBuilder) {
-		//$scope.categories = c.data.categories;
+	$rootScope.edit_page = false;
+	
+	$rootScope.$watch('edit_page', function() {
+		//c.data.isPageBuilder = $rootScope.edit_page;
 		if ($scope.categories.length > 0)
-			$scope.mdlCategory = $scope.categories[0].value;
-	}
+			$scope.mdlCategory.value = $scope.categories[0].value;
+	});
+
+	//if (c.data.isPageBuilder) {
+		//$scope.categories = c.data.categories;
+		//if ($scope.categories.length > 0)
+			//$scope.mdlCategory = $scope.categories[0].value;
+	//}
 
 	$(document).ready(function() {      
 		var isMobile = window.matchMedia("only screen and (max-width: 760px)");
@@ -35,6 +44,20 @@ function($rootElement, $scope, $compile, $window, $location, spUtil, $rootScope,
 		if (isTablet.matches)
 			is_tablet = true;
 	});
+	
+	$scope.popImage = function(fieldName) {
+		//$scope.showThisImg = img;
+		//debugger;
+		if ($scope.selectedWidget.fieldModels[fieldName]) {
+		$scope.shownImg = 'sys_attachment.do?sys_id=' + $scope.selectedWidget.fieldModels[fieldName];
+		}
+		else
+			$scope.shownImg = '';
+		//$scope.picture = {
+				//'background-image': "url('" + $scope.shownImg + "')",
+				//'color': 'transparent'
+			//};
+	}
 
 	var modalRowAdd = {
 		animation: true,
@@ -128,7 +151,7 @@ function($rootElement, $scope, $compile, $window, $location, spUtil, $rootScope,
 	}
 
 	$scope.fltAvail = function(widg) {
-		return (widg.category.value.toString().toLowerCase() == $scope.mdlCategory.toString().toLowerCase() &&
+		return (widg.category.value.toString().toLowerCase() == $scope.mdlCategory.value.toString().toLowerCase() &&
 						(widg.minSize == null || widg.minSize <= $scope.colSize));
 	}
 
@@ -142,7 +165,7 @@ function($rootElement, $scope, $compile, $window, $location, spUtil, $rootScope,
 			if (typeof tmp != 'object')
 				continue;
 
-			if (tmp.type == 'lookup' || tmp.type == 'imgPicker') {
+			if (tmp.type == 'lookup') {
 				tmp.trying = true;
 				var lookupOb = {}, fdName = tmp.field_name;
 				lookupOb = tmp.lookup_data;
@@ -163,6 +186,7 @@ function($rootElement, $scope, $compile, $window, $location, spUtil, $rootScope,
 	}
 
 	$scope.loadThisWidget = function(widgOb) {
+		$scope.shownImg = "";
 		$scope.selectedWidget = {};
 		$scope.selectedWidget = widgOb;
 		$scope.selectedWidget.fieldModels = {};
@@ -173,39 +197,12 @@ function($rootElement, $scope, $compile, $window, $location, spUtil, $rootScope,
 		$scope.rows = dataRows;
 	}
 
-	$scope.popImage = function(e) {
-		$scope.shownImg = e;
-	}
-
-	$scope.toggleEdit = function(e) {
-		$scope.tgEdit = !$scope.tgEdit;
-		/*var init = true;
-		$scope.listener = $scope.$watch('rows', function() {
-			if (!init)
-				$scope.pageModified = true;
-			else
-				init = false;
-		}, true);*/
-		//$scope.rowCopy = $.extend(true, {}, $scope.rows);
-		if ($scope.tgEdit) {
-			$scope.editLabel = 'Save Page Layout';
-			$(e.target).toggleClass('btn-primary');
-			$(e.target).toggleClass('btn-success');
-			$(e.target).blur();
-		}
-		else {
-			$scope.editLabel = 'Edit Page Layout';
-			$(e.target).toggleClass('btn-primary');
-			$(e.target).toggleClass('btn-success');
-			$(e.target).blur();
-			$scope.fireSave();
-		}
-	}	
+	//$scope.popImage = function(e) {
+		//$scope.shownImg = e;
+	//}	
 
 	$scope.saveSelectedWidget = function() {
-		console.log($scope.selectedWidget);
-		console.log($scope.siblingWidgets);
-		var options = {};
+		var options = $scope.selectedWidget.default_options || {};
 		for (var x in $scope.selectedWidget.user_options.value.options) {
 			var tmp = $scope.selectedWidget.user_options.value.options[x];
 
@@ -247,9 +244,10 @@ function($rootElement, $scope, $compile, $window, $location, spUtil, $rootScope,
 	}
 
 	$scope.fireSave = function() {
-		c.server.get({type: 'save', rows: $scope.rows}).then(function(){
+		c.server.get({type: 'save', rows: $scope.rows, page: $scope.page.id}).then(function(){
 			$scope.pageModified = false;
 			c.data.defaultSetup = false;
+			$rootScope.edit_page = !$rootScope.edit_page;
 		});
 	}
 
@@ -305,13 +303,14 @@ function($rootElement, $scope, $compile, $window, $location, spUtil, $rootScope,
 		var tmp;
 		$scope.popupOb = tmp = {};
 		tmp.canMoveLeft = (colIndex > 0);
-		tmp.canMoveRight = (row.cols[colIndex+1].bootClass != '');
+		tmp.canMoveRight = (row.cols[colIndex+1] && row.cols[colIndex+1].bootClass != '');
 		tmp.canMoveUp = (rowIndex > 0);
 		tmp.canMoveDown = (typeof $scope.rows[rowIndex+1] != 'undefined')
 		tmp.widgets = col.widgets;
 		tmp.rowIndex = rowIndex;
 		tmp.colIndex = colIndex;
 		tmp.rowOb = row;
+		tmp.colOb = col;
 		tmp.canAddWidgets = (col.widgets.length <= MAX_WIDGETS);
 		tmp.hasWidgets = col.widgets.length > 0;
 	}
@@ -342,16 +341,13 @@ function($rootElement, $scope, $compile, $window, $location, spUtil, $rootScope,
 	}
 
 	$scope.undo = function(e) {
-		c.server.get({type: 'refresh'}).then(function(response) {
+		c.server.get({type: 'refresh', page: $scope.page.id}).then(function(response) {
 			$scope.setRows(response.data.userRows);
 			c.data.defaultSetup = response.data.defaultSetup;
 			
-			$scope.tgEdit = !$scope.tgEdit;
+			//$scope.tgEdit = !$scope.tgEdit;
+			$rootScope.edit_page = !$rootScope.edit_page;
 			$scope.pageModified = false;
-			var sib = $(e.target).prev();
-			$scope.editLabel = 'Edit Page Layout';
-			$(sib).toggleClass('btn-primary');
-			$(sib).toggleClass('btn-success');
 		});
 	}
 
@@ -360,16 +356,12 @@ function($rootElement, $scope, $compile, $window, $location, spUtil, $rootScope,
 		if (!conf)
 			return;
 
-		c.server.get({type: 'restore'}).then(function(response) {
+		c.server.get({type: 'restore', page: $scope.page.id}).then(function(response) {
 			$scope.setRows(response.data.userRows);
 			c.data.defaultSetup = response.data.defaultSetup;
 			
-			$scope.tgEdit = !$scope.tgEdit;
+			$rootScope.edit_page = !$rootScope.edit_page;
 			$scope.pageModified = false;			
-			var sib = $(e.target).prev().prev();
-			$scope.editLabel = 'Edit Page Layout';
-			$(sib).toggleClass('btn-primary');
-			$(sib).toggleClass('btn-success');
 		});
 	}
 
@@ -1396,24 +1388,23 @@ overflow-y: auto;
         <docs/>
         <field_list/>
         <has_preview>false</has_preview>
-        <id>page_builder</id>
+        <id>page-builder</id>
         <internal>false</internal>
         <link/>
         <name>Page Builder</name>
         <option_schema/>
         <public>false</public>
         <roles/>
-        <script><![CDATA[
-(function() {
+        <script><![CDATA[(function() {
 	/* populate the 'data' object */
 	/* e.g., data.table = $sp.getValue('table'); */
 	//data.isPageBuilder = $sp.getParameter('id').toString().toLowerCase() == 'page_builder';
-	var helper = new ServicePortalCustomizerServerLogic();
-	var pgBuildName = spCustomizer.CUSTOMIZER_PAGE_NAME;
-	var thisPage = $sp.getParameter('id').toString().toLowerCase()
-	data.isPageBuilder = (thisPage == pgBuildName.toLowerCase())
-	var pageSys;
-	thisPage = (data.isPageBuilder) ? $sp.getParameter('tbName') : thisPage;
+	var helper = new ServicePortalCustomizerServerLogic($sp);
+	//var pgBuildName = spCustomizer.CUSTOMIZER_PAGE_NAME;
+	var thisPage = ($sp.getParameter('id')) ? $sp.getParameter('id').toString().toLowerCase() : '';
+	//data.isPageBuilder = (thisPage == pgBuildName.toLowerCase());
+	//var pageSys;
+	//thisPage = (data.isPageBuilder) ? $sp.getParameter('tbName') : thisPage;
 
 	if (input) {
 		if (input.type == 'option_lookup' && input.lookup_ob) {
@@ -1425,21 +1416,21 @@ overflow-y: auto;
 		}
 
 		if (input.type == 'save' && input.rows) {
-			helper.fireSave(input.rows, gs.getUserID(), $sp.getParameter('tbName'));
+			helper.fireSave(input.rows, gs.getUserID(), $sp.getParameter('id') || input.page);
 		}
 
 		if (input.type == 'refresh') {
 			data.defaultSetup = false;
-			pageSys = helper._lookupPage(thisPage);
-			data.userRows = helper.getUserRows(thisPage, $sp, false, pageSys);
+			pageSys = helper._lookupPage(input.page || thisPage);
+			data.userRows = helper.getUserRows(input.page || thisPage, $sp, false, pageSys);
 			if (data.userRows.length == 0) {
-				data.userRows = helper.getUserRows(thisPage, $sp, true, pageSys);
+				data.userRows = helper.getUserRows(input.page || thisPage, $sp, true, pageSys);
 				data.defaultSetup = true;
 			}
 		}
 
 		if (input.type == 'restore') {
-			helper.fireSave([], gs.getUserID(), $sp.getParameter('tbName'));
+			helper.fireSave([], gs.getUserID(), $sp.getParameter('id') || input.page);
 			data.userRows = helper.getUserRows(thisPage, $sp, true);
 			data.defaultSetup = true;
 		}
@@ -1780,32 +1771,32 @@ function isEmpty(ob) {
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2017-10-06 15:22:58</sys_created_on>
         <sys_id>2e2adfcfdb290300e9cbfbefbf9619e9</sys_id>
-        <sys_mod_count>248</sys_mod_count>
+        <sys_mod_count>287</sys_mod_count>
         <sys_name>Page Builder</sys_name>
         <sys_package display_value="Service Portal Customizer" source="x_60289_service_po">848abecfdbe50300e9cbfbefbf961941</sys_package>
         <sys_policy/>
         <sys_scope display_value="Service Portal Customizer">848abecfdbe50300e9cbfbefbf961941</sys_scope>
         <sys_update_name>sp_widget_2e2adfcfdb290300e9cbfbefbf9619e9</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2017-10-13 21:27:07</sys_updated_on>
+        <sys_updated_on>2018-08-21 07:07:54</sys_updated_on>
         <template><![CDATA[<div id="top">
-  <div ng-if="data.isPageBuilder">
-    <button class="btn btn-primary btn-lg edit" ng-click="toggleEdit($event)">{{editLabel}}</button>
-    <button class="btn btn-warning btn-lg show-hide" ng-show="tgEdit && pageModified" ng-click="undo($event)">${Revert}</button>
-    <button class="btn btn-danger btn-lg show-hide" ng-show="tgEdit && !data.defaultSetup" ng-click="restore($event)">${Restore Default}</button>
+  <div ng-if="$root.edit_page">
+    <button class="btn btn-success btn-lg edit" ng-click="fireSave()" ng-show="pageModified">${Save Page Layout}</button>
+    <button class="btn btn-warning btn-lg show-hide" ng-show="$root.edit_page && pageModified" ng-click="undo($event)">${Revert}</button>
+    <button class="btn btn-danger btn-lg show-hide" ng-show="$root.edit_page && !data.defaultSetup" ng-click="restore($event)">${Restore Default}</button>
   </div>
-  <div ng-show="tgEdit && rows.length < maxRows" class="borderBottom">
+  <div ng-show="$root.edit_page && rows.length < maxRows" class="borderBottom margin20 text-center">
     <div>
-      <h4 class="text-active">${Click below to select the grid style for this row}</h4>
+      <h3 class="text-active">${Click below to select the grid style for this row}</h3>
     </div>
-    <button class="btn btn-lg btn-primary" ng-click="popModalNewRow()"><i class="fa fa-plus-circle text-active"></i></button>
+    <button class="btn btn-lg btn-primary" ng-click="popModalNewRow()"><i class="fa fa-4x fa-plus-circle text-active"></i></button>
   </div>
   <div id="builder">
-    <div class="row repeated-item" ng-class="{'padding20 margin20 borderBottom borderTop minHeight100': tgEdit}" ng-repeat="(rowIndex, row) in rows">
-      <div class="centCont repeated-item {{col.bootClass}}" ng-class="{'borderLeft borderRight minHeight300 successBackground roundedBorder': tgEdit}" ng-repeat="col in row.cols" ng-if="col.bootClass">
+    <div class="row repeated-item" ng-class="{'padding20 margin20 borderBottom borderTop minHeight100': $root.edit_page}" ng-repeat="(rowIndex, row) in rows">
+      <div class="centCont repeated-item {{col.bootClass}}" ng-class="{'borderLeft borderRight minHeight300 successBackground roundedBorder': $root.edit_page}" ng-repeat="col in row.cols" ng-if="col.bootClass">
         <sp-widget class="show-hide" ng-show="rows[rowIndex].cols[$index].widgets.length > 0" ng-repeat="widg in rows[rowIndex].cols[$index].widgets" widget="widg"></sp-widget>
         <!--<button class="btn btn-lg btn-primary centerMe" ng-click="popWidgetCTRLModal(rows[rowIndex].cols[$index])" ng-show="tgEdit"><i class="fa fa-plus-circle text-active"></i></button>-->
-        <button ng-if="tgEdit" class="popBtn" uib-popover-template="rowWidgetPopoverOb.templateUrl" popover-placement="{{calculateMyPopoverPlacement(col, $index, rowIndex)}}"popover-animation="true"
+        <button ng-if="$root.edit_page" class="popBtn" uib-popover-template="rowWidgetPopoverOb.templateUrl" popover-placement="{{calculateMyPopoverPlacement(col, $index, rowIndex)}}"popover-animation="true"
                 popover-trigger="focus" popover-popup-close-delay="50" ng-click="loadPopupData(row, rowIndex, col, $index)"></button>
       </div>
     </div>
@@ -1816,18 +1807,18 @@ function isEmpty(ob) {
   	<h3><span><b>${Row Controls}</b></span></h3>
       <div class="icon-bar" style="text-align: center;"> 
         <a href ng-click="moveMeUp(popupOb.rowIndex)" ng-class="{'disabledLink': !popupOb.canMoveUp}"><i class="fa fa-arrow-up"></i></a>
-        <a href="#" ng-click="moveMeDown(popupOb.rowIndex)" ng-class="{'disabledLink': !popupOb.canMoveDown}"><i class="fa fa-arrow-down"></i></a> 
-        <a href="#"><i class="fa fa-remove"></i></a>
+        <a href ng-click="moveMeDown(popupOb.rowIndex)" ng-class="{'disabledLink': !popupOb.canMoveDown}"><i class="fa fa-arrow-down"></i></a> 
+        <a href><i class="fa fa-remove"></i></a>
   		</div>
       <hr/>
       <h3><span><b>${Column Controls}</b></span></h3>
       <div class="icon-bar"> 
-        <a href="#" ng-click="moveMeLeft(popupOb.colIndex, popupOb.rowOb)" ng-class="{'disabledLink': !popupOb.canMoveLeft}"><i class="fa fa-arrow-left"></i></a>
-        <a href="#" ng-click="moveMeRight(popupOb.colIndex, popupOb.rowOb)" ng-class="{'disabledLink': !popupOb.canMoveRight}"><i class="fa fa-arrow-right"></i></a> 
-        <a href="#"><i class="fa fa-remove"></i></a>
+        <a href ng-click="moveMeLeft(popupOb.colIndex, popupOb.rowOb)" ng-class="{'disabledLink': !popupOb.canMoveLeft}"><i class="fa fa-arrow-left"></i></a>
+        <a href ng-click="moveMeRight(popupOb.colIndex, popupOb.rowOb)" ng-class="{'disabledLink': !popupOb.canMoveRight}"><i class="fa fa-arrow-right"></i></a> 
+        <a href><i class="fa fa-remove"></i></a>
   		</div>
-      <button style="100%;" ng-if="popupOb.canAddWidgets" class="btn btn-lg btn-primary">Add Widget</button>
-      <button style="100%;" ng-if="popupOb.hasWidgets" class="btn btn-lg btn-info">Manage Widgets</button>
+      <button style="width: 95%;" ng-if="popupOb.canAddWidgets" ng-click="popWidgetCTRLModal(popupOb.colOb)" class="btn btn-lg btn-primary">Add Widget</button>
+      <button style="width: 95%;" ng-if="popupOb.hasWidgets" class="btn btn-lg btn-info">Manage Widgets</button>
   </div>
 </script>]]></template>
     </sp_widget>

@@ -4,12 +4,15 @@
         <access>package_private</access>
         <active>true</active>
         <api_name>x_60289_service_po.ServicePortalCustomizerServerLogic</api_name>
+        <caller_access/>
         <client_callable>false</client_callable>
         <description/>
         <name>ServicePortalCustomizerServerLogic</name>
         <script><![CDATA[var ServicePortalCustomizerServerLogic = Class.create();
 ServicePortalCustomizerServerLogic.prototype = {
-	initialize: function() {
+	initialize: function(sp) {
+		this.CUSTOMIZER_PAGE_NAME = 'page_builder';
+		this._sp = sp;
 	},
 
 	type: 'ServicePortalCustomizerServerLogic',
@@ -305,13 +308,13 @@ ServicePortalCustomizerServerLogic.prototype = {
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2017-10-06 15:46:09</sys_created_on>
         <sys_id>d0da5343db690300e9cbfbefbf9619db</sys_id>
-        <sys_mod_count>84</sys_mod_count>
+        <sys_mod_count>86</sys_mod_count>
         <sys_name>ServicePortalCustomizerServerLogic</sys_name>
         <sys_package display_value="Service Portal Customizer" source="x_60289_service_po">848abecfdbe50300e9cbfbefbf961941</sys_package>
         <sys_policy>read</sys_policy>
         <sys_scope display_value="Service Portal Customizer">848abecfdbe50300e9cbfbefbf961941</sys_scope>
         <sys_update_name>sys_script_include_d0da5343db690300e9cbfbefbf9619db</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2017-10-13 20:35:06</sys_updated_on>
+        <sys_updated_on>2018-08-21 04:30:56</sys_updated_on>
     </sys_script_include>
 </record_update>

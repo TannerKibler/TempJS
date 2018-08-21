@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <record_update>
-    <sys_dictionary action="INSERT_OR_UPDATE" element="" table="x_60289_service_po_customer_facing_widget">
+    <sys_dictionary action="INSERT_OR_UPDATE" element="" extends="sys_metadata" table="x_60289_service_po_customer_facing_widget">
         <active>true</active>
         <array>false</array>
         <array_denormalized>false</array_denormalized>
@@ -31,6 +31,8 @@
         <element/>
         <element_reference>false</element_reference>
         <foreign_database/>
+        <function_definition/>
+        <function_field>false</function_field>
         <internal_type display_value="Collection">collection</internal_type>
         <mandatory>false</mandatory>
         <max_length>40</max_length>
@@ -52,15 +54,15 @@
         <sys_class_name>sys_dictionary</sys_class_name>
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2017-10-06 15:16:33</sys_created_on>
-        <sys_id>18b8d7cfdb290300e9cbfbefbf961940</sys_id>
-        <sys_mod_count>1</sys_mod_count>
+        <sys_id>614d82eb37331300e3168cf6c3990edb</sys_id>
+        <sys_mod_count>0</sys_mod_count>
         <sys_name>x_60289_service_po_customer_facing_widget</sys_name>
         <sys_package display_value="Service Portal Customizer" source="x_60289_service_po">848abecfdbe50300e9cbfbefbf961941</sys_package>
         <sys_policy/>
         <sys_scope display_value="Service Portal Customizer">848abecfdbe50300e9cbfbefbf961941</sys_scope>
-        <sys_update_name>sys_dictionary_x_60289_service_po_customer_facing_widget_null</sys_update_name>
-        <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2017-10-06 17:38:38</sys_updated_on>
+        <sys_update_name>sys_dictionary_x_60289_service_po_customer_facing_widget_NULL</sys_update_name>
+        <sys_updated_by>system</sys_updated_by>
+        <sys_updated_on>2018-08-14 15:36:32</sys_updated_on>
         <table_reference>false</table_reference>
         <text_index>false</text_index>
         <unique>false</unique>

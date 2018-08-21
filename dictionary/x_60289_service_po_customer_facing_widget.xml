@@ -5,6 +5,8 @@
         <element choice="1" label="Category" mandatory="true" max_length="100" name="category" type="choice">
             <choice>
                 <element label="Lists" sequence="0" value="lists"/>
+                <element label="Alerts" sequence="1" value="alerts"/>
+                <element label="Miscellaneous" sequence="1" value="misc"/>
             </choice>
         </element>
         <element label="Default Options" max_length="500" name="default_options" type="string"/>
